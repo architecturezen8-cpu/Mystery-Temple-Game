@@ -6,16 +6,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: set up JDK 17
+      - name: set up JDK 21  # මෙතන 17 තිබුණු එක 21 කළා
         uses: actions/setup-java@v4
         with:
-          java-version: '17'
+          java-version: '21'
           distribution: 'temurin'
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 22  # මෙතන 18 තිබුණු එක 22 කළා
+          node-version: 22
 
       - name: Install Dependencies
         run: npm install
