@@ -1,5 +1,19 @@
 {
   "appId": "com.mysterytemple.game",
   "appName": "Mystery Temple",
-  "webDir": "www"
+  "webDir": "www",
+  "android": {
+    "allowMixedContent": true,
+    "webContentsDebuggingEnabled": false
+  },
+  "server": {
+    "androidScheme": "https"
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 2000,
+      "backgroundColor": "#030510",
+      "androidSplashResourceName": "splash"
+    }
+  }
 }
