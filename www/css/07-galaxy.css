@@ -1,0 +1,806 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   07-GALAXY.CSS
+   Mystery Temple - Galaxy Edition
+   
+   Space theme visuals, infinity loop, local decrypter, temple wall.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+
+/* ╔═══════════════════════════════════════════════════════════════════════════╗
+   ║  LOCAL DECRYPTER OVERLAY                                                  ║
+   ╚═══════════════════════════════════════════════════════════════════════════╝ */
+
+.local-decrypter-overlay {
+    position: fixed;
+    inset: 0;
+    background: radial-gradient(circle at top, #0d0618, #050208);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: var(--z-modal);
+    padding: var(--spacing-lg);
+}
+
+.local-decrypter-content {
+    text-align: center;
+    padding: var(--spacing-xl);
+    background: radial-gradient(circle at top, rgba(10, 4, 22, 0.98), rgba(5, 2, 14, 0.99));
+    border-radius: var(--radius-2xl);
+    border: 1px solid var(--border-accent);
+    max-width: 520px;
+    width: 100%;
+    box-shadow: 0 0 60px var(--color-accent-glow);
+}
+
+.local-decrypter-content h2 {
+    color: var(--border-accent);
+    font-size: 1.5em;
+    margin-bottom: var(--spacing-lg);
+    text-shadow: var(--glow-gold);
+}
+
+.local-desc {
+    color: rgba(245, 200, 66, 0.85);
+    font-size: var(--font-sm);
+    margin-bottom: var(--spacing-lg);
+    font-family: var(--font-mono);
+}
+
+
+/* ╔═══════════════════════════════════════════════════════════════════════════╗
+   ║  INFINITY NEON LOOP ANIMATION                                             ║
+   ║  Smooth continuous fill effect                                            ║
+   ╚═══════════════════════════════════════════════════════════════════════════╝ */
+
+.infinity-container {
+    position: relative;
+    width: 200px;
+    height: 100px;
+    margin: 0 auto var(--spacing-lg);
+}
+
+.infinity-svg {
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+}
+
+/* Background faint path */
+.infinity-bg {
+    fill: none;
+    stroke: rgba(255, 200, 120, 0.15);
+    stroke-width: 8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+/* Animated neon path - smooth fill loop */
+.infinity-neon {
+    fill: none;
+    stroke: url(#neonGradient);
+    stroke-width: 6;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+
+    /* draw loop */
+    stroke-dasharray: 520;
+    stroke-dashoffset: 520;
+    animation: infinityFillLoop 3.2s ease-in-out infinite;
+    filter: drop-shadow(0 0 10px rgba(212, 168, 67, 0.85));
+}
+
+@keyframes infinityFillLoop {
+    0% {
+        stroke-dashoffset: 520;
+        opacity: 0;
+    }
+
+    10% {
+        opacity: 1;
+    }
+
+    60% {
+        stroke-dashoffset: 0;
+        opacity: 1;
+    }
+
+    85% {
+        stroke-dashoffset: 0;
+        opacity: 0;
+    }
+
+    /* fade before reset */
+    100% {
+        stroke-dashoffset: 520;
+        opacity: 0;
+    }
+}
+
+@keyframes infinityGlow {
+
+    0%,
+    100% {
+        filter: drop-shadow(0 0 8px rgba(255, 180, 60, 0.6));
+        opacity: 0.9;
+    }
+
+    50% {
+        filter: drop-shadow(0 0 20px rgba(255, 220, 100, 1));
+        opacity: 1;
+    }
+}
+
+/* Alternative: Continuous trace animation */
+.infinity-trace {
+    fill: none;
+    stroke: url(#neonGradient);
+    stroke-width: 6;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-dasharray: 30 15;
+    animation: infinityTrace 1.5s linear infinite;
+    filter: drop-shadow(0 0 12px rgba(255, 180, 60, 0.8));
+}
+
+
+/* ╔═══════════════════════════════════════════════════════════════════════════╗
+   ║  DECRYPTER TEXTAREA WITH TYPING ANIMATION                                 ║
+   ╚═══════════════════════════════════════════════════════════════════════════╝ */
+
+.decrypter-textarea-wrapper {
+    position: relative;
+    margin: var(--spacing-md) 0 var(--spacing-lg);
+}
+
+.decrypter-textarea {
+    width: 100%;
+    height: 140px;
+    background: rgba(0, 20, 15, 0.9);
+    border: 2px solid var(--color-primary-dark);
+    border-radius: var(--radius-lg);
+    padding: var(--spacing-lg);
+    color: var(--color-primary);
+    font-family: var(--font-mono);
+    font-size: var(--font-sm);
+    resize: none;
+    outline: none;
+    transition: all var(--transition-fast);
+}
+
+.decrypter-textarea:focus {
+    border-color: var(--color-primary);
+    box-shadow: var(--glow-green);
+}
+
+/* Typing Example Animation */
+.typing-example {
+    position: absolute;
+    top: var(--spacing-lg);
+    left: var(--spacing-lg);
+    right: var(--spacing-lg);
+    font-family: var(--font-mono);
+    font-size: var(--font-sm);
+    color: var(--color-primary);
+    opacity: 0.6;
+    pointer-events: none;
+    text-align: left;
+}
+
+.typing-text {
+    display: inline;
+}
+
+.typing-cursor {
+    display: inline-block;
+    width: 2px;
+    height: 1em;
+    background: var(--color-primary);
+    margin-left: 2px;
+    animation: cursorBlink 1s step-end infinite;
+    vertical-align: text-bottom;
+}
+
+.decrypter-buttons {
+    display: flex;
+    gap: var(--spacing-md);
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.paste-btn {
+    background: linear-gradient(135deg, rgba(0, 80, 60, 0.9), rgba(0, 60, 45, 0.95));
+    border-color: var(--color-primary);
+}
+
+.decrypt-btn {
+    background: linear-gradient(135deg, #a60, #840);
+    border-color: var(--color-accent);
+    color: var(--color-accent);
+}
+
+
+/* ╔═══════════════════════════════════════════════════════════════════════════╗
+   ║  FINAL WIN OVERLAY                                                        ║
+   ╚═══════════════════════════════════════════════════════════════════════════╝ */
+
+.final-win-screen {
+    position: relative;
+}
+
+.final-win-screen::before {
+    content: '';
+    position: absolute;
+    top: -3px;
+    left: -3px;
+    right: -3px;
+    height: 4px;
+    background: linear-gradient(90deg, var(--color-primary), var(--color-secondary), var(--color-primary));
+    background-size: 200% 100%;
+    animation: glowMove 2s linear infinite;
+    border-radius: var(--radius-2xl) var(--radius-2xl) 0 0;
+}
+
+.final-subtitle {
+    font-family: var(--font-mono);
+    font-size: var(--font-sm);
+    color: #9fe;
+}
+
+/* Morse Collection List */
+.final-morse-list {
+    margin: var(--spacing-lg) 0;
+    max-height: 210px;
+    overflow-y: auto;
+    padding-right: var(--spacing-sm);
+}
+
+.final-morse-item {
+    background: linear-gradient(135deg, rgba(0, 30, 28, 0.85), rgba(0, 20, 20, 0.95));
+    border-radius: var(--radius-lg);
+    padding: var(--spacing-md);
+    border: 1px solid var(--color-primary-soft);
+    margin-bottom: var(--spacing-sm);
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-xs);
+    overflow: hidden;
+}
+
+.final-morse-header {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    font-family: var(--font-mono);
+    font-size: var(--font-sm);
+    color: #8ef;
+}
+
+.final-morse-preview {
+    font-family: var(--font-mono);
+    font-size: var(--font-xs);
+    color: var(--color-primary);
+    opacity: 0.9;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Decrypter Buttons */
+.decrypter-buttons {
+    display: flex;
+    gap: var(--spacing-md);
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-top: var(--spacing-lg);
+}
+
+.global-btn {
+    background: linear-gradient(135deg, #0088cc, #006699);
+    border-color: var(--color-secondary);
+    color: #fff;
+}
+
+.global-btn:hover {
+    box-shadow: var(--glow-blue);
+}
+
+.local-btn {
+    background: linear-gradient(135deg, #996600, #774400);
+    border-color: var(--color-accent);
+    color: var(--color-accent);
+}
+
+.local-btn:hover {
+    box-shadow: var(--glow-gold);
+}
+
+
+/* ╔═══════════════════════════════════════════════════════════════════════════╗
+   ║  FINAL DIALOG                                                             ║
+   ╚═══════════════════════════════════════════════════════════════════════════╝ */
+
+.final-dialog-screen {
+    animation: overlayAppear 0.5s ease;
+}
+
+.final-message {
+    background: radial-gradient(ellipse, rgba(0, 75, 58, 0.95), rgba(0, 38, 28, 0.98));
+    padding: var(--spacing-xl);
+    border-radius: var(--radius-xl);
+    margin: var(--spacing-lg) 0;
+    font-size: 1.1em;
+    border: 1px solid var(--color-primary);
+    box-shadow: var(--glow-green);
+    color: var(--color-primary);
+    line-height: 1.65;
+    text-align: left;
+}
+
+.response-prompt {
+    margin-top: var(--spacing-lg);
+    color: var(--text-secondary);
+}
+
+.response-buttons {
+    display: flex;
+    gap: var(--spacing-md);
+    justify-content: center;
+    margin-top: var(--spacing-md);
+    flex-wrap: wrap;
+}
+
+
+/* ╔═══════════════════════════════════════════════════════════════════════════╗
+   ║  THANK YOU OVERLAY                                                        ║
+   ╚═══════════════════════════════════════════════════════════════════════════╝ */
+
+.thank-you-screen {
+    animation: overlayAppear 0.5s ease;
+}
+
+.creator-credit {
+    margin-top: var(--spacing-xl);
+    padding: var(--spacing-lg);
+    background: rgba(0, 60, 50, 0.45);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--color-primary-soft);
+}
+
+.creator-name {
+    font-size: var(--font-lg);
+    color: var(--color-primary);
+    text-shadow: var(--glow-green);
+    margin-top: var(--spacing-sm);
+}
+
+.temple-btn {
+    margin-top: var(--spacing-lg);
+    background: linear-gradient(135deg, #443322, #332211);
+    border-color: #886644;
+    color: #ddaa77;
+}
+
+.temple-btn:hover {
+    box-shadow: 0 0 20px rgba(136, 102, 68, 0.6);
+}
+
+
+/* ╔═══════════════════════════════════════════════════════════════════════════╗
+   ║  TEMPLE WALL OVERLAY                                                      ║
+   ╚═══════════════════════════════════════════════════════════════════════════╝ */
+
+.temple-wall-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: var(--z-modal);
+    background: radial-gradient(circle at top, #101825 0%, #050712 45%, #000 100%);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: var(--spacing-lg);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.5s ease, transform 0.9s ease;
+    transform: scale(1.1);
+}
+
+.temple-wall-overlay.active {
+    opacity: 1;
+    pointer-events: auto;
+    transform: scale(1);
+    animation: templeZoomIn 0.8s ease;
+}
+
+/* Temple Scene Grid */
+.temple-wall-scene {
+    position: relative;
+    max-width: 800px;
+    width: 100%;
+    height: min(60vh, 420px);
+    display: grid;
+    grid-template-columns: 1fr 3fr 1fr;
+    gap: var(--spacing-sm);
+    align-items: stretch;
+}
+
+/* Side Pillars */
+.temple-wall-column {
+    background: linear-gradient(180deg, #151820, #262b33, #090b10);
+    box-shadow:
+        inset 0 0 12px rgba(0, 0, 0, 0.8),
+        0 0 30px rgba(0, 0, 0, 0.8);
+    border-radius: var(--radius-xl);
+    opacity: 0.9;
+    position: relative;
+    overflow: hidden;
+}
+
+.temple-wall-column.left {
+    transform: skewY(3deg);
+}
+
+.temple-wall-column.right {
+    transform: skewY(-3deg);
+}
+
+.pillar-glow {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg,
+            rgba(255, 200, 100, 0.05) 0%,
+            rgba(255, 200, 100, 0.15) 50%,
+            rgba(255, 200, 100, 0.05) 100%);
+    animation: pillarGlow 3s ease-in-out infinite;
+}
+
+/* Center Panel */
+.temple-wall-panel {
+    position: relative;
+    border-radius: var(--radius-xl);
+    background: radial-gradient(circle at top, #2c2b2a, #161514 55%, #0b0a09 100%);
+    box-shadow:
+        0 0 45px rgba(255, 196, 96, 0.35),
+        0 0 80px rgba(0, 0, 0, 0.9),
+        inset 0 0 30px rgba(0, 0, 0, 0.85);
+    /* overflow: hidden; - REMOVED to enable scrolling */
+    padding: var(--spacing-xl);
+}
+
+.temple-wall-glow {
+    position: absolute;
+    inset: 0;
+    background:
+        radial-gradient(circle at 20% 0%, rgba(255, 230, 160, 0.08), transparent 60%),
+        radial-gradient(circle at 80% 0%, rgba(255, 200, 120, 0.1), transparent 60%),
+        repeating-linear-gradient(90deg,
+            rgba(255, 255, 255, 0.02) 0px,
+            rgba(255, 255, 255, 0.02) 1px,
+            transparent 1px,
+            transparent 6px),
+        repeating-linear-gradient(0deg,
+            rgba(255, 255, 255, 0.02) 0px,
+            rgba(255, 255, 255, 0.02) 1px,
+            transparent 1px,
+            transparent 6px);
+    mix-blend-mode: screen;
+    opacity: 0.9;
+    pointer-events: none;
+}
+
+/* === TEMPLE WALL - DESKTOP FIX === */
+.temple-wall-panel {
+    max-height: 70vh;
+    overflow-y: auto;
+    padding: 40px 20px 20px 20px;
+    /* උඩින් padding වැඩි කරන්න */
+    scroll-padding-top: 40px;
+}
+
+/* Desktop specific */
+@media (min-width: 769px) {
+    .temple-wall-panel {
+        max-height: 65vh;
+        padding-top: 50px;
+        /* උඩ කොටස පෙන්වීමට තවත් ඉඩ */
+    }
+
+    .temple-wall-engraving {
+        padding-top: 20px;
+    }
+
+    /* පළමු පේළිය පැහැදිලිව පෙන්වන්න */
+    .temple-wall-engraving-line:first-child {
+        margin-top: 10px;
+    }
+}
+
+/* Header section padding */
+.temple-wall-header {
+    margin-top: 20px;
+    padding-top: 10px;
+}
+
+/* Engraving Text */
+.temple-wall-engraving {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    max-height: 100%;
+    padding: var(--spacing-sm);
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    gap: var(--spacing-sm);
+    z-index: 2;
+    overflow-y: auto;
+    overflow-x: hidden;
+    overscroll-behavior: contain;
+    scroll-behavior: smooth;
+    scrollbar-width: thin;
+}
+
+.temple-wall-engraving-line {
+    font-family: var(--font-title);
+    font-size: clamp(0.82rem, 1.5vw, 1rem);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #f8e5b2;
+    text-align: center;
+    opacity: 0;
+    transform: translateY(8px);
+    line-height: 1.6;
+    white-space: pre-wrap;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+    text-shadow:
+        0 0 8px rgba(255, 220, 120, 0.8),
+        0 0 20px rgba(255, 180, 60, 0.7);
+}
+
+.temple-wall-engraving-line.small {
+    font-size: var(--font-sm);
+    letter-spacing: 0.18em;
+    text-align: center;
+}
+
+.temple-wall-engraving-line.sinhala {
+    font-family: var(--font-sinhala);
+    font-size: clamp(0.88rem, 1.8vw, 1rem);
+    letter-spacing: 0;
+    line-height: 1.9;
+    padding: 0.35rem 0.25rem;
+    text-align: center;
+    text-shadow:
+        0 0 8px rgba(255, 240, 180, 0.7),
+        0 0 18px rgba(255, 200, 90, 0.6);
+}
+
+.temple-wall-engraving-line.code {
+    font-family: var(--font-mono);
+    font-size: 0.95em;
+    color: #ffe596;
+}
+
+.temple-wall-engraving-line.dim {
+    opacity: 0.75;
+    text-shadow:
+        0 0 5px rgba(255, 210, 120, 0.4),
+        0 0 14px rgba(255, 200, 100, 0.5);
+}
+
+.temple-wall-engraving-line.glow-strong {
+    text-shadow:
+        0 0 12px rgba(255, 230, 150, 1),
+        0 0 30px rgba(255, 200, 90, 0.9);
+}
+
+.temple-wall-engraving-line.show {
+    animation: wallLineIn 0.7s ease forwards;
+}
+
+/* Continue Button */
+.temple-continue-btn {
+    margin-top: var(--spacing-lg);
+    padding: var(--spacing-md) var(--spacing-2xl);
+    background: linear-gradient(135deg, #084, #063);
+    border: 2px solid var(--color-primary);
+    border-radius: var(--radius-full);
+    color: var(--color-primary);
+    font-size: 1em;
+    font-family: var(--font-title);
+    cursor: pointer;
+    box-shadow: var(--glow-green);
+    transition: all var(--transition-normal);
+}
+
+.temple-continue-btn:hover {
+    transform: scale(1.05);
+}
+
+
+/* ╔═══════════════════════════════════════════════════════════════════════════╗
+   ║  UNLOCK ANIMATION OVERLAY                                                 ║
+   ╚═══════════════════════════════════════════════════════════════════════════╝ */
+
+.unlock-animation-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(5, 2, 14, 0.97);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: var(--z-modal);
+}
+
+.unlock-animation-content {
+    text-align: center;
+    padding: var(--spacing-2xl);
+}
+
+.unlock-lock-icon {
+    font-size: 5em;
+    animation: shake 0.3s ease-in-out infinite;
+    margin-bottom: var(--spacing-lg);
+}
+
+.unlock-lock-icon.unlocked {
+    animation: none;
+    filter: drop-shadow(var(--glow-green));
+}
+
+.unlock-text {
+    font-family: var(--font-mono);
+    font-size: var(--font-xl);
+    color: var(--color-accent);
+    letter-spacing: 4px;
+    margin-bottom: var(--spacing-lg);
+}
+
+.unlock-progress-container {
+    width: 300px;
+    max-width: 90vw;
+    height: 16px;
+    background: rgba(50, 40, 0, 0.7);
+    border-radius: var(--radius-lg);
+    border: 2px solid var(--color-accent);
+    overflow: hidden;
+    margin: 0 auto;
+}
+
+.unlock-progress-bar {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, #a80, var(--color-accent), #ff0);
+    transition: width 0.08s linear;
+    box-shadow: var(--glow-gold);
+}
+
+
+/* ╔═══════════════════════════════════════════════════════════════════════════╗
+   ║  RUNE SYMBOLS (Level Complete)                                            ║
+   ╚═══════════════════════════════════════════════════════════════════════════╝ */
+
+.rune-symbol-display {
+    display: flex;
+    justify-content: center;
+    gap: var(--spacing-sm);
+    margin: var(--spacing-lg) 0;
+}
+
+.rune-symbol {
+    width: 40px;
+    height: 48px;
+    background: rgba(80, 40, 120, 0.7);
+    border: 2px solid var(--border-purple);
+    border-radius: var(--radius-md);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 1.4em;
+    color: #fff;
+    box-shadow: var(--glow-purple);
+    animation: runeGlow 1.5s ease-in-out infinite;
+}
+
+
+/* ╔═══════════════════════════════════════════════════════════════════════════╗
+   ║  GAME FEATURES LIST (Start Screen)                                        ║
+   ╚═══════════════════════════════════════════════════════════════════════════╝ */
+
+.game-features {
+    margin: var(--spacing-lg) 0;
+    text-align: left;
+    padding: 0 var(--spacing-lg);
+}
+
+.feature-item {
+    padding: var(--spacing-sm) 0;
+    color: #bdc;
+    font-size: var(--font-sm);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.feature-item:last-child {
+    border-bottom: none;
+}
+
+.difficulty-info {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--spacing-sm);
+    margin: var(--spacing-lg) 0;
+    padding: var(--spacing-sm) var(--spacing-md);
+    background: rgba(100, 0, 0, 0.3);
+    border-radius: var(--radius-full);
+    border: 1px solid var(--color-danger);
+}
+
+.difficulty-label {
+    font-size: var(--font-sm);
+    color: var(--text-secondary);
+    font-family: var(--font-mono);
+}
+
+.difficulty-value {
+    font-size: var(--font-sm);
+    color: var(--color-danger);
+    font-weight: bold;
+    font-family: var(--font-mono);
+}
+
+.play-btn {
+    padding: var(--spacing-lg) var(--spacing-3xl);
+    font-size: var(--font-lg);
+    animation: btnPulse 2s ease-in-out infinite;
+}
+
+.start-footer {
+    margin-top: var(--spacing-lg);
+}
+
+.lives-info {
+    font-size: var(--font-sm);
+    color: var(--color-danger);
+    font-family: var(--font-mono);
+}
+
+
+/* ╔═══════════════════════════════════════════════════════════════════════════╗
+   ║  GAME OVER SCREEN                                                         ║
+   ╚═══════════════════════════════════════════════════════════════════════════╝ */
+
+.game-over-screen {
+    animation: overlayAppear 0.5s ease;
+}
+
+.game-over-stats {
+    margin: var(--spacing-lg) 0;
+    padding: var(--spacing-lg);
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: var(--radius-lg);
+}
+
+.game-over-stats .stat-row {
+    display: flex;
+    justify-content: space-between;
+    padding: var(--spacing-sm) 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.game-over-stats .stat-row:last-child {
+    border-bottom: none;
+}
+
+.game-over-stats .stat-label {
+    color: var(--text-secondary);
+    font-family: var(--font-mono);
+    font-size: var(--font-sm);
+}
+
+.game-over-stats .stat-value {
+    color: var(--color-primary);
+    font-family: var(--font-mono);
+    font-weight: bold;
+}
