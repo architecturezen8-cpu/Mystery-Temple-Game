@@ -1,0 +1,112 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   02-LAYOUT.CSS — Royal Purple & Golden Edition
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+
+html,body{width:100%;height:100%;overflow:hidden;overflow-x:hidden;touch-action:none;overscroll-behavior:none;}
+
+body{
+    font-family:var(--font-title);
+    background: radial-gradient(ellipse at 30% 0%, #1a0b2e 0%, #0d0618 40%, #07030f 100%);
+    color:var(--text-primary);
+    line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+    -moz-osx-font-smoothing:grayscale;
+}
+
+.hidden{display:none !important;}
+.invisible{visibility:hidden;pointer-events:none;}
+.no-scroll{overflow:hidden !important;}
+
+::-webkit-scrollbar{width:6px;height:6px;}
+::-webkit-scrollbar-track{background:rgba(10,4,22,0.8);border-radius:var(--radius-sm);}
+::-webkit-scrollbar-thumb{background:linear-gradient(180deg,var(--color-purple-dark),var(--color-primary-dark));border-radius:var(--radius-sm);}
+::-webkit-scrollbar-thumb:hover{background:var(--color-primary);}
+*{scrollbar-width:thin;scrollbar-color:var(--color-purple-dark) rgba(10,4,22,0.8);}
+
+/* Make temple wall panel scrollbar visible with styled appearance */
+.temple-wall-panel::-webkit-scrollbar{width:8px;}
+.temple-wall-panel::-webkit-scrollbar-track{background:rgba(0,0,0,0.3);border-radius:4px;}
+.temple-wall-panel::-webkit-scrollbar-thumb{background:rgba(255,200,100,0.4);border-radius:4px;}
+.temple-wall-panel::-webkit-scrollbar-thumb:hover{background:rgba(255,200,100,0.6);}
+.temple-wall-panel{scrollbar-width:thin;scrollbar-color:rgba(255,200,100,0.4) rgba(0,0,0,0.3);}
+
+::selection{background:var(--color-primary);color:var(--bg-dark);}
+::-moz-selection{background:var(--color-primary);color:var(--bg-dark);}
+
+#gameCanvas{display:block;width:100%;height:100%;position:fixed;inset:0;z-index:var(--z-canvas);}
+
+.game-hud{position:fixed;inset:0;display:flex;flex-direction:column;justify-content:space-between;pointer-events:none;z-index:var(--z-hud);padding:var(--hud-padding);}
+
+.hud-top{display:flex;justify-content:space-between;align-items:flex-start;gap:var(--spacing-md);flex-wrap:wrap;}
+.hud-top-center{display:flex;flex-direction:column;align-items:center;gap:30px;}
+.top-left{display:flex;flex-direction:column;gap:10px;}
+
+.hud-middle{display:flex;justify-content:space-between;align-items:flex-start;flex:1;padding:var(--spacing-md) 0;}
+.hud-left{display:flex;flex-direction:column;gap:var(--spacing-md);align-items:flex-start;}
+.hud-center{display:flex;flex-direction:column;align-items:center;justify-content:flex-start;flex:1;}
+.hud-right{display:flex;flex-direction:column;gap:var(--spacing-md);align-items:flex-end;}
+
+.hud-bottom{display:flex;flex-direction:column;align-items:center;gap:var(--spacing-sm);padding-bottom:30px;}
+
+.game-hud>*{pointer-events:none;}
+.game-hud .stats-panel,.game-hud .level-panel,.game-hud .lives-panel,.game-hud .pause-btn,
+.game-hud .gem-counter-panel,.game-hud .letters-panel,.game-hud .heart-progress-panel,
+.game-hud .active-boosts-panel,.game-hud .story-panel,.game-hud .chase-progress,
+.game-hud .speed-indicator{pointer-events:auto;}
+
+.overlay{
+    position:fixed;inset:0;
+    background:var(--bg-overlay);
+    backdrop-filter:blur(12px);
+    display:flex;justify-content:center;align-items:center;
+    z-index:var(--z-overlay);
+    padding:var(--spacing-lg);
+    overflow-y:auto;
+}
+
+.overlay-content{
+    text-align:center;
+    padding:var(--spacing-2xl);
+    background:linear-gradient(145deg, rgba(13,6,26,0.98), rgba(8,3,16,0.99));
+    clip-path:polygon(0 0,calc(100% - 14px) 0,100% 14px,100% 100%,14px 100%,0 calc(100% - 14px));
+    border:2px solid var(--border-primary);
+    max-width:var(--overlay-max-width);
+    width:100%;
+    box-shadow:var(--shadow-panel),0 0 40px rgba(123,53,216,0.2);
+    max-height:90vh;
+    overflow-y:auto;
+    position:relative;
+}
+
+.overlay-content::before{
+    content:'';position:absolute;top:0;right:0;
+    width:0;height:0;border-style:solid;
+    border-width:0 24px 24px 0;
+    border-color:transparent var(--color-primary) transparent transparent;
+    opacity:0.7;
+}
+
+.overlay-content.no-scroll{overflow:hidden;}
+
+.mobile-controls{position:fixed;bottom:0;left:0;width:100%;padding:var(--spacing-lg);display:flex;justify-content:space-between;align-items:flex-end;pointer-events:none;z-index:var(--z-controls);}
+.control-group{display:flex;gap:var(--spacing-md);pointer-events:auto;}
+.left-controls{justify-content:flex-start;}
+.right-controls{justify-content:flex-end;}
+
+.flex-row{display:flex;flex-direction:row;}
+.flex-col{display:flex;flex-direction:column;}
+.flex-center{display:flex;justify-content:center;align-items:center;}
+.flex-between{display:flex;justify-content:space-between;align-items:center;}
+.flex-wrap{flex-wrap:wrap;}
+.gap-sm{gap:var(--spacing-sm);}
+.gap-md{gap:var(--spacing-md);}
+.gap-lg{gap:var(--spacing-lg);}
+
+html,body{overflow-x:hidden !important;}
+.overlay,.overlay-content,.morse-code-overlay,.morse-content,.hacking-overlay,.hack-terminal,
+.cipher-translation-overlay,.cipher-translation-container,.local-decrypter-overlay,
+.local-decrypter-content,.final-morse-list,.temple-wall-overlay,.temple-wall-panel,
+.glitch-delete-overlay,.cinematic-credits-overlay{overflow-x:hidden !important;max-width:100%;}
+.hack-lines,.morse-text,.cipher-morse-text,.temple-wall-engraving-line.code,.glitch-file-list{word-break:break-word;overflow-wrap:anywhere;white-space:normal;}
