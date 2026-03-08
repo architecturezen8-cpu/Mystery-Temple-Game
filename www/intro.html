@@ -1,0 +1,792 @@
+<!DOCTYPE html>
+<html lang="si">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>Mystery Temple — Official Access</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Cinzel+Decorative:wght@700;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --gold:        #d4a843;
+            --gold-bright: #f5c842;
+            --gold-dim:    #9a7830;
+            --purple-deep: #0d0618;
+            --purple-mid:  #2e1060;
+            --purple-vivid:#5a1fa8;
+            --bg:          #07030f;
+            --gold-glow:   rgba(212,168,67,0.55);
+            --error-red:   #ff3d3d;
+        }
+        *,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+        html,body{width:100%;height:100%;background:var(--bg);overflow:hidden;font-family:'Cinzel',serif;color:#fff;}
+
+        /* ── BG LAYERS ── */
+        #particle-canvas{position:fixed;inset:0;z-index:0;pointer-events:none;}
+        .grid-overlay{position:fixed;inset:0;z-index:1;pointer-events:none;
+            background-image:linear-gradient(rgba(212,168,67,0.04) 1px,transparent 1px),
+            linear-gradient(90deg,rgba(212,168,67,0.04) 1px,transparent 1px);
+            background-size:50px 50px;}
+        .scanlines{position:fixed;inset:0;z-index:2;pointer-events:none;
+            background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.08) 2px,rgba(0,0,0,0.08) 4px);}
+        .diag-accents{position:fixed;inset:0;z-index:1;pointer-events:none;overflow:hidden;}
+        .diag-accents::before,.diag-accents::after{content:'';position:absolute;width:2px;height:200vh;
+            background:linear-gradient(180deg,transparent,var(--gold-dim),transparent);opacity:0.18;animation:diag-drift 12s linear infinite;}
+        .diag-accents::before{left:15%;top:-50%;transform:rotate(-20deg);animation-delay:-4s;}
+        .diag-accents::after{right:15%;top:-50%;transform:rotate(20deg);}
+        @keyframes diag-drift{from{transform:rotate(-20deg) translateY(-10%);}to{transform:rotate(-20deg) translateY(10%);}}
+
+        /* ══════════════════════════════════════════
+           INTRO ANIMATION — LARGE & FULLY RESPONSIVE
+        ══════════════════════════════════════════ */
+        #intro-layer{
+            position:fixed;inset:0;display:flex;justify-content:center;align-items:center;
+            z-index:200;background:var(--bg);
+            transition:opacity 1.8s cubic-bezier(0.4,0,0.2,1);
+            padding:clamp(10px,3vw,30px);
+        }
+        .reveal-box{
+            position:relative;width:100%;max-width:1100px;
+            text-align:center;padding:clamp(15px,3vw,30px) clamp(10px,2vw,20px);
+        }
+        .reveal-box::before,.reveal-box::after{
+            content:'';position:absolute;
+            width:clamp(40px,6vw,75px);height:clamp(40px,6vw,75px);
+            border:2px solid var(--gold);opacity:0;
+            animation:corner-appear 1s forwards 1s;
+        }
+        .reveal-box::before{top:0;left:15px;border-right:0;border-bottom:0;}
+        .reveal-box::after{bottom:0;right:15px;border-left:0;border-top:0;}
+        @keyframes corner-appear{to{opacity:0.6;}}
+
+        /* SVG title — scales with viewport */
+        .intro-svg{
+            width:100%;height:auto;overflow:visible;
+            /* minimum real height so it's never tiny */
+            min-height:clamp(100px,22vw,260px);
+        }
+
+        /* Stage 1: outline draw */
+        .stroke-only{
+            fill:transparent;stroke:url(#titleGrad);stroke-width:1.5;
+            stroke-dasharray:1400;stroke-dashoffset:1400;
+            animation:draw-lines 4.2s forwards cubic-bezier(0.4,0.05,0.45,0.95);
+        }
+        @keyframes draw-lines{0%{stroke-dashoffset:1400;opacity:0;}15%{opacity:1;}100%{stroke-dashoffset:0;opacity:1;}}
+
+        /* Stage 2: fill */
+        .fill-only{
+            fill:url(#titleGrad);opacity:0;
+            animation:smooth-fill 3s forwards ease-in-out 3.8s;
+            filter:drop-shadow(0 0 clamp(10px,2vw,24px) var(--gold-glow));
+        }
+        @keyframes smooth-fill{0%{opacity:0;filter:blur(14px);}100%{opacity:1;filter:blur(0);}}
+
+        /* Stage 3: shimmer sweep */
+        .border-sweep{
+            fill:transparent;stroke:var(--gold-bright);stroke-width:3;
+            stroke-dasharray:200;stroke-dashoffset:1600;opacity:0;
+            filter:drop-shadow(0 0 8px var(--gold-bright));
+            animation:sweep-line 2.8s linear 6.5s forwards;
+        }
+        @keyframes sweep-line{0%{opacity:0;stroke-dashoffset:1600;}8%{opacity:1;}100%{opacity:0;stroke-dashoffset:0;}}
+
+        .intro-tagline{
+            font-family:'Cinzel',serif;
+            font-size:clamp(0.5rem,1.8vw,0.8rem);
+            letter-spacing:clamp(5px,2vw,12px);
+            color:var(--gold-dim);margin-top:clamp(14px,3vw,28px);
+            opacity:0;animation:fade-in-up 1.2s forwards ease-out 7s;text-transform:uppercase;
+        }
+        @keyframes fade-in-up{from{opacity:0;transform:translateY(14px);}to{opacity:0.7;transform:translateY(0);}}
+        .intro-line{
+            display:block;width:0;height:1px;
+            background:linear-gradient(90deg,transparent,var(--gold),transparent);
+            margin:clamp(8px,1.5vw,14px) auto 0;
+            animation:line-expand 1s forwards ease-out 7.8s;
+        }
+        @keyframes line-expand{to{width:62%;}}
+
+        /* ══════════════════════════════════════════
+           ACCESS PORTAL
+        ══════════════════════════════════════════ */
+        #ui-layer{
+            position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
+            z-index:10;width:92%;max-width:460px;
+            opacity:0;visibility:hidden;transition:opacity 1s ease;
+        }
+        .auth-container{
+            position:relative;padding:2px;
+            clip-path:polygon(0 0,calc(100% - 18px) 0,100% 18px,100% 100%,18px 100%,0 calc(100% - 18px));
+            overflow:hidden;background:transparent;
+        }
+        .auth-container::before{
+            content:'';position:absolute;inset:0;z-index:0;
+            background:conic-gradient(from 0deg,var(--purple-mid),var(--gold) 30%,var(--purple-mid) 45%,var(--gold-bright) 55%,var(--purple-mid) 70%,var(--gold) 90%,var(--purple-mid));
+            animation:border-spin 5s linear infinite;clip-path:inherit;
+        }
+        @keyframes border-spin{from{transform:rotate(0deg) scale(1.5);}to{transform:rotate(360deg) scale(1.5);}}
+        .auth-container::after{
+            content:'';position:absolute;top:0;right:0;width:0;height:0;
+            border-style:solid;border-width:0 36px 36px 0;
+            border-color:transparent var(--gold) transparent transparent;
+            z-index:5;opacity:0.7;filter:drop-shadow(-2px 2px 6px var(--gold-glow));
+        }
+        .auth-card{
+            position:relative;
+            background:linear-gradient(160deg,rgba(13,6,24,0.98) 0%,rgba(22,11,42,0.98) 50%,rgba(13,6,24,0.98) 100%);
+            backdrop-filter:blur(40px);
+            padding:clamp(36px,6vw,56px) clamp(20px,5vw,44px) clamp(32px,5vw,48px);
+            text-align:center;z-index:2;
+            clip-path:polygon(0 0,calc(100% - 16px) 0,100% 16px,100% 100%,16px 100%,0 calc(100% - 16px));
+        }
+        .auth-card::before{
+            content:'';position:absolute;top:-60px;left:50%;transform:translateX(-50%);
+            width:280px;height:200px;
+            background:radial-gradient(ellipse,rgba(90,31,168,0.35),transparent 70%);
+            pointer-events:none;z-index:0;
+        }
+        .corner{position:absolute;width:22px;height:22px;border:1.5px solid var(--gold);z-index:3;}
+        .corner.tl{top:12px;left:12px;border-right:0;border-bottom:0;}
+        .corner.tr{top:12px;right:12px;border-left:0;border-bottom:0;}
+        .corner.bl{bottom:12px;left:12px;border-right:0;border-top:0;}
+        .corner.br{bottom:12px;right:12px;border-left:0;border-top:0;}
+        .corner::after{content:'';position:absolute;width:4px;height:4px;background:var(--gold-bright);box-shadow:0 0 6px var(--gold-bright);}
+        .corner.tl::after{top:-2px;left:-2px;}.corner.tr::after{top:-2px;right:-2px;}
+        .corner.bl::after{bottom:-2px;left:-2px;}.corner.br::after{bottom:-2px;right:-2px;}
+
+        .portal-header{position:relative;z-index:2;margin-bottom:clamp(24px,4vw,40px);}
+        .portal-emblem{display:block;width:42px;height:42px;margin:0 auto 16px;}
+        .portal-emblem svg{width:100%;height:100%;}
+        h1{color:var(--gold);font-family:'Cinzel Decorative',serif;font-size:clamp(0.6rem,2vw,0.72rem);
+           font-weight:700;letter-spacing:clamp(5px,2vw,8px);
+           text-shadow:0 0 14px var(--gold-glow),0 0 40px rgba(212,168,67,0.2);text-transform:uppercase;}
+        .h1-underline{display:block;height:1px;background:linear-gradient(90deg,transparent,var(--gold-dim),transparent);margin:12px auto 0;width:70%;}
+
+        .input-wrapper{position:relative;margin-bottom:8px;z-index:2;}
+        #accessCode{
+            width:100%;padding:16px 20px;background:rgba(0,0,0,0.55);
+            border:0;border-top:1px solid rgba(212,168,67,0.15);
+            border-right:1px solid rgba(212,168,67,0.15);
+            border-left:1px solid rgba(212,168,67,0.15);
+            border-bottom:2px solid var(--gold);
+            color:var(--gold-bright);text-align:center;outline:none;
+            font-family:'Cinzel',serif;font-size:clamp(0.85rem,2.5vw,1rem);
+            letter-spacing:5px;transition:border-color 0.3s,box-shadow 0.3s;
+            clip-path:polygon(0 0,calc(100% - 8px) 0,100% 8px,100% 100%,0 100%);
+        }
+        #accessCode::placeholder{color:rgba(212,168,67,0.3);letter-spacing:3px;font-size:0.75rem;}
+        #accessCode:focus{border-bottom-color:var(--gold-bright);box-shadow:0 4px 20px rgba(212,168,67,0.2),inset 0 0 20px rgba(90,31,168,0.1);}
+        .input-focus-line{
+            position:absolute;bottom:0;left:50%;transform:translateX(-50%) scaleX(0);
+            width:100%;height:2px;background:var(--gold-bright);box-shadow:0 0 12px var(--gold-bright);
+            transition:transform 0.35s cubic-bezier(0.4,0,0.2,1);pointer-events:none;
+        }
+        #accessCode:focus ~ .input-focus-line{transform:translateX(-50%) scaleX(1);}
+
+        .shake{animation:shake 0.42s both;border-color:var(--error-red) !important;}
+        @keyframes shake{
+            10%,90%{transform:translate3d(-2px,0,0);}20%,80%{transform:translate3d(3px,0,0);}
+            30%,50%,70%{transform:translate3d(-5px,0,0);}40%,60%{transform:translate3d(5px,0,0);}
+        }
+        #error-msg{
+            height:18px;color:var(--error-red);font-size:0.62rem;letter-spacing:3px;
+            margin-bottom:22px;opacity:0;transition:opacity 0.3s;font-weight:700;
+            z-index:2;position:relative;text-shadow:0 0 10px rgba(255,61,61,0.5);
+        }
+        .init-btn{
+            position:relative;width:100%;padding:18px;
+            background:linear-gradient(110deg,var(--purple-deep) 0%,var(--purple-mid) 45%,var(--purple-deep) 100%);
+            background-size:220% 100%;border:1px solid var(--gold-dim);border-top:1px solid var(--gold);
+            color:var(--gold);font-family:'Cinzel Decorative',serif;
+            font-size:clamp(0.6rem,1.8vw,0.7rem);font-weight:700;cursor:pointer;
+            letter-spacing:clamp(4px,1.5vw,6px);
+            transition:background-position 0.5s,box-shadow 0.4s,border-color 0.3s,transform 0.2s;
+            overflow:hidden;z-index:2;
+            clip-path:polygon(8px 0,100% 0,100% calc(100% - 8px),calc(100% - 8px) 100%,0 100%,0 8px);
+            text-transform:uppercase;
+        }
+        .init-btn::before{
+            content:'';position:absolute;inset:0;
+            background:linear-gradient(90deg,transparent 0%,rgba(212,168,67,0.08) 50%,transparent 100%);
+            transform:translateX(-100%);transition:transform 0.5s;
+        }
+        .init-btn:hover::before{transform:translateX(100%);}
+        .init-btn:hover{
+            background-position:right center;border-color:var(--gold-bright);
+            box-shadow:0 0 26px var(--gold-glow),0 0 60px rgba(212,168,67,0.1),inset 0 0 20px rgba(90,31,168,0.3);
+            transform:translateY(-1px);
+        }
+        .init-btn:active{transform:translateY(0);}
+
+        .hex-row{display:flex;justify-content:center;gap:8px;margin-top:28px;z-index:2;position:relative;}
+        .hex-dot{
+            width:6px;height:6px;background:var(--purple-mid);border:1px solid var(--gold-dim);
+            transform:rotate(45deg);opacity:0.6;animation:hex-pulse 3s infinite;
+        }
+        .hex-dot:nth-child(2){animation-delay:0.5s;}.hex-dot:nth-child(3){animation-delay:1s;background:var(--gold-dim);opacity:0.9;}
+        .hex-dot:nth-child(4){animation-delay:1.5s;}.hex-dot:nth-child(5){animation-delay:2s;}
+        @keyframes hex-pulse{0%,100%{opacity:0.4;}50%{opacity:0.9;background:rgba(212,168,67,0.4);}}
+
+        /* ══════════════════════════════════════════
+           SYNC OVERLAY — FULLSCREEN FIXED
+        ══════════════════════════════════════════ */
+        #sync-overlay{
+            position:fixed;inset:0;background:rgba(7,3,15,0.98);
+            display:none;flex-direction:column;justify-content:center;align-items:center;
+            z-index:500;backdrop-filter:blur(20px);padding:20px;
+        }
+        .sync-title-svg{width:min(82%,460px);margin-bottom:8px;}
+        .char{
+            font-family:'Cinzel Decorative',serif;font-size:clamp(32px,8vw,52px);font-weight:900;
+            fill:none;stroke:var(--gold);stroke-width:0.8;
+            stroke-dasharray:700;stroke-dashoffset:700;
+            text-anchor:middle;filter:drop-shadow(0 0 4px var(--gold-glow));
+        }
+        @keyframes draw-char{
+            0%{stroke-dashoffset:700;fill:transparent;opacity:0;}
+            35%{stroke-dashoffset:0;fill:transparent;opacity:1;}
+            65%,100%{stroke-dashoffset:0;fill:var(--gold);stroke:transparent;opacity:1;}
+        }
+        .progress-outer{width:min(280px,80vw);margin-top:clamp(24px,4vw,40px);position:relative;}
+        .progress-track{
+            width:100%;height:3px;background:rgba(46,16,96,0.4);
+            border:1px solid rgba(212,168,67,0.15);
+            clip-path:polygon(4px 0,100% 0,100% 100%,0 100%,0 4px);
+            overflow:hidden;position:relative;
+        }
+        .progress-bar{
+            height:100%;width:0%;
+            background:linear-gradient(90deg,var(--purple-mid),var(--gold));
+            transition:width 0.7s cubic-bezier(0.4,0,0.2,1);
+            box-shadow:0 0 16px var(--gold-glow);position:relative;
+        }
+        .progress-bar::after{
+            content:'';position:absolute;right:0;top:0;width:24px;height:100%;
+            background:linear-gradient(90deg,transparent,var(--gold-bright),transparent);
+            animation:shimmer 1.5s infinite;
+        }
+        @keyframes shimmer{0%{opacity:0;transform:scaleX(0.5);}50%{opacity:1;}100%{opacity:0;transform:scaleX(1.5);}}
+        .progress-outer::before,.progress-outer::after{
+            content:'';position:absolute;top:50%;transform:translateY(-50%) rotate(45deg);
+            width:5px;height:5px;background:var(--gold-dim);border:1px solid var(--gold);
+        }
+        .progress-outer::before{left:-14px;}.progress-outer::after{right:-14px;}
+
+        #syncStatus{
+            margin-top:clamp(14px,3vw,22px);font-size:clamp(0.5rem,1.8vw,0.6rem);
+            letter-spacing:5px;color:var(--gold);opacity:0.75;font-family:'Cinzel',serif;
+            text-align:center;min-height:20px;transition:opacity 0.4s;
+        }
+        #accessGranted{
+            margin-top:clamp(16px,3vw,28px);
+            font-family:'Cinzel Decorative',serif;
+            font-size:clamp(0.85rem,4vw,1.5rem);
+            letter-spacing:clamp(5px,2vw,10px);
+            color:var(--gold-bright);
+            text-shadow:0 0 30px rgba(245,200,66,0.9),0 0 60px rgba(245,200,66,0.4);
+            opacity:0;transform:scale(0.8);
+            transition:opacity 0.7s ease,transform 0.7s ease;
+            text-transform:uppercase;
+        }
+        #accessGranted.show{opacity:1;transform:scale(1);}
+
+        /* ══════════════════════════════════════════
+           3-SECOND PRELOADER
+        ══════════════════════════════════════════ */
+        #preloader{
+            position:fixed;inset:0;background:var(--bg);
+            display:none;flex-direction:column;justify-content:center;align-items:center;
+            z-index:600;
+        }
+        .pre-ring{
+            width:clamp(50px,10vw,70px);height:clamp(50px,10vw,70px);
+            border:3px solid rgba(212,168,67,0.15);border-top-color:var(--gold);
+            border-radius:50%;animation:pre-spin 0.9s linear infinite;
+            margin-bottom:clamp(14px,3vw,24px);
+        }
+        .pre-text{
+            font-family:'Cinzel Decorative',serif;
+            font-size:clamp(0.55rem,2vw,0.8rem);
+            letter-spacing:clamp(5px,2vw,9px);
+            color:var(--gold);text-shadow:0 0 20px var(--gold-glow);
+            animation:pre-pulse 1.2s ease-in-out infinite;
+            text-transform:uppercase;
+        }
+        .pre-dots{display:flex;gap:8px;margin-top:clamp(12px,2vw,20px);}
+        .pre-dot{
+            width:8px;height:8px;background:var(--gold-dim);border-radius:50%;
+            animation:dot-bounce 1.2s ease-in-out infinite;
+        }
+        .pre-dot:nth-child(2){animation-delay:0.2s;}
+        .pre-dot:nth-child(3){animation-delay:0.4s;}
+        @keyframes pre-spin{to{transform:rotate(360deg);}}
+        @keyframes pre-pulse{0%,100%{opacity:0.5;}50%{opacity:1;text-shadow:0 0 30px var(--gold-bright);}}
+        @keyframes dot-bounce{0%,100%{transform:scale(0.7);opacity:0.4;}50%{transform:scale(1.2);opacity:1;background:var(--gold-bright);}}
+
+        /* ══════════════════════════════════════════
+           RESPONSIVE
+        ══════════════════════════════════════════ */
+        @media (max-width:480px){
+            #ui-layer{width:96%;padding:0 4px;}
+            .auth-card{padding:30px 16px 28px;}
+            h1{font-size:0.58rem;letter-spacing:4px;}
+            .init-btn{font-size:0.58rem;letter-spacing:3px;padding:15px;}
+            .char{font-size:26px;}
+            .auth-container::after{border-width:0 24px 24px 0;}
+        }
+        @media (max-width:360px){
+            #ui-layer{width:98%;}
+            .auth-card{padding:24px 12px 22px;}
+            #accessCode{font-size:0.78rem;letter-spacing:2px;padding:12px 14px;}
+            .init-btn{padding:13px;font-size:0.56rem;letter-spacing:2px;}
+            h1{letter-spacing:3px;}
+        }
+        @media (max-width:320px){
+            .auth-card{padding:20px 10px 18px;}
+            #accessCode{font-size:0.75rem;letter-spacing:1px;}
+            .corner{width:16px;height:16px;}
+        }
+        /* Safe area for notched phones */
+        @supports (padding: env(safe-area-inset-bottom)){
+            #ui-layer{
+                padding-bottom: env(safe-area-inset-bottom);
+            }
+        }
+        @media (min-width:768px) and (max-width:1024px){
+            #ui-layer{max-width:500px;}
+            .intro-svg{min-height:200px;}
+        }
+        @media (min-width:1025px){
+            .intro-svg{min-height:280px;}
+        }
+    </style>
+</head>
+<body>
+
+<canvas id="particle-canvas"></canvas>
+<div class="grid-overlay"></div>
+<div class="scanlines"></div>
+<div class="diag-accents"></div>
+
+<!-- ── INTRO ANIMATION ── -->
+<div id="intro-layer">
+    <div class="reveal-box">
+        <svg class="intro-svg" viewBox="0 0 960 300" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+                <linearGradient id="titleGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%"   style="stop-color:#4a1d8a;"/>
+                    <stop offset="28%"  style="stop-color:#c9a84c;"/>
+                    <stop offset="52%"  style="stop-color:#f5c842;"/>
+                    <stop offset="78%"  style="stop-color:#c9a84c;"/>
+                    <stop offset="100%" style="stop-color:#2e1060;"/>
+                </linearGradient>
+                <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+                    <feGaussianBlur stdDeviation="4" result="blur"/>
+                    <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+                </filter>
+            </defs>
+            <g font-family="'Cinzel Decorative',serif" font-weight="900" font-size="118"
+               text-anchor="middle" dominant-baseline="middle">
+                <!-- Stroke outline draw -->
+                <text x="50%" y="38%" class="stroke-only">MYSTERY</text>
+                <text x="50%" y="74%" class="stroke-only">TEMPLE</text>
+                <!-- Filled gradient -->
+                <text x="50%" y="38%" class="fill-only" filter="url(#glow)">MYSTERY</text>
+                <text x="50%" y="74%" class="fill-only" filter="url(#glow)">TEMPLE</text>
+                <!-- Shimmer sweep -->
+                <text x="50%" y="38%" class="border-sweep">MYSTERY</text>
+                <text x="50%" y="74%" class="border-sweep">TEMPLE</text>
+            </g>
+        </svg>
+        <p class="intro-tagline">Uncover The Ancient Secrets</p>
+        <span class="intro-line"></span>
+    </div>
+</div>
+
+<!-- ── ACCESS PORTAL ── -->
+<div id="ui-layer">
+    <div class="auth-container">
+        <div class="auth-card">
+            <div class="corner tl"></div><div class="corner tr"></div>
+            <div class="corner bl"></div><div class="corner br"></div>
+            <div class="portal-header">
+                <span class="portal-emblem">
+                    <svg viewBox="0 0 42 42" fill="none">
+                        <polygon points="21,2 40,21 21,40 2,21" stroke="#d4a843" stroke-width="1.5" fill="rgba(90,31,168,0.25)"/>
+                        <polygon points="21,8 34,21 21,34 8,21" stroke="#d4a843" stroke-width="0.8" fill="rgba(90,31,168,0.15)" opacity="0.6"/>
+                        <circle cx="21" cy="21" r="3.5" fill="#d4a843" opacity="0.9"/>
+                        <line x1="21" y1="2" x2="21" y2="8" stroke="#f5c842" stroke-width="1.5"/>
+                        <line x1="21" y1="34" x2="21" y2="40" stroke="#f5c842" stroke-width="1.5"/>
+                        <line x1="2" y1="21" x2="8" y2="21" stroke="#f5c842" stroke-width="1.5"/>
+                        <line x1="34" y1="21" x2="40" y2="21" stroke="#f5c842" stroke-width="1.5"/>
+                    </svg>
+                </span>
+                <h1>Access Portal</h1>
+                <span class="h1-underline"></span>
+            </div>
+            <div class="input-wrapper">
+                <input type="text" id="accessCode" placeholder="ENTER ACCESS CODE" autocomplete="off" spellcheck="false">
+                <div class="input-focus-line"></div>
+            </div>
+            <div id="error-msg">INVALID ACCESS CODE</div>
+            <button class="init-btn" onclick="startSync()">Initialize</button>
+            <div class="hex-row">
+                <div class="hex-dot"></div><div class="hex-dot"></div><div class="hex-dot"></div>
+                <div class="hex-dot"></div><div class="hex-dot"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ── SYNC / DOWNLOAD OVERLAY ── -->
+<div id="sync-overlay">
+    <svg class="sync-title-svg" viewBox="0 0 580 310">
+        <g font-family="'Cinzel Decorative',serif" font-weight="900" text-anchor="middle">
+            <text class="char" x="50%" y="34%">MYSTERY</text>
+            <text class="char" x="50%" y="75%">TEMPLE</text>
+        </g>
+    </svg>
+    <div class="progress-outer">
+        <div class="progress-track"><div class="progress-bar" id="pBar"></div></div>
+    </div>
+    <p id="syncStatus">CONNECTING TO SERVER</p>
+    <div id="accessGranted">⚔ ACCESS GRANTED ⚔</div>
+</div>
+
+<!-- ── 3-SECOND PRELOADER ── -->
+<div id="preloader">
+    <div class="pre-ring"></div>
+    <p class="pre-text">Entering Temple</p>
+    <div class="pre-dots">
+        <div class="pre-dot"></div><div class="pre-dot"></div><div class="pre-dot"></div>
+    </div>
+</div>
+
+<!-- ── PARTICLE SYSTEM ── -->
+<script>
+(function(){
+    const cv=document.getElementById('particle-canvas'),ctx=cv.getContext('2d');
+    let W,H,P=[];
+    function resize(){W=cv.width=window.innerWidth;H=cv.height=window.innerHeight;}
+    resize();window.addEventListener('resize',resize);
+    function rand(a,b){return a+Math.random()*(b-a);}
+    class Particle{
+        constructor(){this.reset();}
+        reset(){this.x=rand(0,W);this.y=rand(0,H);this.sz=rand(0.5,2);
+            this.vx=rand(-0.3,0.3);this.vy=rand(-0.5,-0.1);
+            this.life=rand(0.3,1);this.decay=rand(0.001,0.003);
+            this.gold=Math.random()>0.6;}
+        update(){this.x+=this.vx;this.y+=this.vy;this.life-=this.decay;
+            if(this.life<=0||this.y<-10)this.reset();}
+        draw(){ctx.save();ctx.globalAlpha=this.life*0.7;
+            ctx.fillStyle=this.gold?`rgba(212,168,67,${this.life})`:`rgba(122,53,220,${this.life})`;
+            ctx.shadowColor=this.gold?'#d4a843':'#7b35d8';ctx.shadowBlur=4;
+            ctx.fillRect(this.x,this.y,this.sz,this.sz);ctx.restore();}
+    }
+    for(let i=0;i<80;i++)P.push(new Particle());
+    (function loop(){ctx.clearRect(0,0,W,H);P.forEach(p=>{p.update();p.draw();});requestAnimationFrame(loop);})();
+})();
+</script>
+
+<!-- ── MAIN LOGIC ── -->
+<script>
+/* ════════════════════════════════════════════════
+   SUPABASE
+════════════════════════════════════════════════ */
+const SB_URL = 'https://hdqcehofpuinlatpkgml.supabase.co';
+const SB_KEY = 'sb_publishable_vq4f1sF543S-F_vNSDSaIg_iEl7oeX-';
+let _sb = null;
+function getSB() {
+    if (!_sb) _sb = supabase.createClient(SB_URL, SB_KEY);
+    return _sb;
+}
+
+/* ════════════════════════════════════════════════
+   INTRO FADE → SHOW PORTAL (after 9.8s animation)
+════════════════════════════════════════════════ */
+window.addEventListener('load', () => {
+    setTimeout(() => {
+        const layer = document.getElementById('intro-layer');
+        layer.style.opacity = '0';
+        setTimeout(() => {
+            layer.style.display = 'none';
+            const ui = document.getElementById('ui-layer');
+            ui.style.visibility = 'visible';
+            ui.style.opacity    = '1';
+        }, 1500);
+    }, 9800);
+});
+
+/* ════════════════════════════════════════════════
+   HELPERS
+════════════════════════════════════════════════ */
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+function setProgress(pct, text) {
+    document.getElementById('pBar').style.width = pct + '%';
+    const st = document.getElementById('syncStatus');
+    if (st && text) st.textContent = text;
+}
+
+function showError(msg) {
+    playError();
+    document.getElementById('sync-overlay').style.display = 'none';
+    document.getElementById('pBar').style.width = '0%';
+    document.getElementById('syncStatus').textContent = 'CONNECTING TO SERVER';
+    document.getElementById('accessGranted').classList.remove('show');
+    const inp = document.getElementById('accessCode');
+    const err = document.getElementById('error-msg');
+    err.textContent = msg || 'INVALID ACCESS CODE';
+    inp.classList.add('shake');
+    err.style.opacity = '1';
+    setTimeout(() => inp.classList.remove('shake'), 500);
+    setTimeout(() => err.style.opacity = '0', 3500);
+}
+
+/* CSV helpers */
+function toCSV(rows) {
+    if (!rows || !rows.length) return '';
+    const keys = Object.keys(rows[0]);
+    const esc  = v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
+    return [keys.join(','), ...rows.map(r => keys.map(k => esc(r[k])).join(','))].join('\n');
+}
+function downloadCSV(name, csv) {
+    if (!csv) return;
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+    a.download = name; a.style.display = 'none';
+    document.body.appendChild(a); a.click();
+    setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1200);
+}
+
+/* ════════════════════════════════════════════════
+   MAIN SYNC — access_code → download → localStorage
+════════════════════════════════════════════════ */
+async function startSync() {
+    const inputEl = document.getElementById('accessCode');
+    const code    = inputEl.value.trim();
+    if (!code) { showError('ENTER ACCESS CODE'); return; }
+
+    playKeySound();
+
+    // Show sync overlay
+    document.getElementById('sync-overlay').style.display = 'flex';
+    document.getElementById('accessGranted').classList.remove('show');
+
+    // Restart char animations
+    document.querySelectorAll('.char').forEach((c, i) => {
+        c.style.animation = 'none'; c.offsetHeight;
+        c.style.animation = `draw-char 4s forwards ease-in-out ${i * 0.35}s`;
+    });
+
+    setProgress(8, 'CONNECTING TO SERVER');
+    await sleep(600);
+
+    try {
+        const client = getSB();
+
+        /* STEP 1 — match access_code */
+        setProgress(20, 'CONNECTING TO SERVER');
+        const { data: cfgRows, error: cfgErr } = await client
+            .from('game_configs')
+            .select('*')
+            .eq('access_code', code);
+
+        await sleep(500);
+        if (cfgErr || !cfgRows || !cfgRows.length) {
+            showError('INVALID ACCESS CODE');
+            inputEl.value = '';
+            return;
+        }
+
+        const gameRow = cfgRows[0];
+        const slug    = gameRow.slug || '';
+
+        /* STEP 2 — fetch recipients table (chat_id) */
+        setProgress(40, 'DOWNLOADING FROM SERVER');
+        await sleep(400);
+        const { data: recRows } = await client
+            .from('game_recipients')
+            .select('*')
+            .eq('slug', slug);
+
+        await sleep(300);
+
+        /* STEP 3 — fetch owner info */
+        setProgress(60, 'DOWNLOADING FROM SERVER');
+        await sleep(400);
+        const { data: ownerRows } = await client
+            .from('game_configs')
+            .select('slug, owner_chat_id, receiver_name, access_code')
+            .eq('slug', slug);
+
+        await sleep(300);
+
+        /* STEP 4 — save to localStorage (all key data) */
+        setProgress(78, 'DOWNLOADING FROM SERVER');
+        const cfg = gameRow.config || {};
+        localStorage.setItem('game_config',    JSON.stringify(cfg));
+        localStorage.setItem('game_slug',      slug);
+        localStorage.setItem('owner_chat_id',  gameRow.owner_chat_id  || '');
+        localStorage.setItem('access_code',    gameRow.access_code    || '');
+        localStorage.setItem('receiver_name',  gameRow.receiver_name  || '');
+
+        // player_chat_id: from recipients table
+        const playerChatId = (recRows && recRows.length > 0)
+            ? String(recRows[0].chat_id || '') : '';
+        localStorage.setItem('player_chat_id', playerChatId);
+
+        // window globals for immediate use
+        window.__ACCESS_CODE    = gameRow.access_code   || '';
+        window.__RECEIVER_NAME  = gameRow.receiver_name || '';
+        window.__PLAYER_CHAT_ID = playerChatId;
+
+        await sleep(300);
+
+        /* STEP 5 — Save initial receipt to game_receipts (access_code + player_chat_id) */
+        setProgress(91, 'SAVING DATA');
+        try {
+            const receiptPayload = {
+                slug:           slug,
+                access_code:    gameRow.access_code  || '',
+                player_chat_id: playerChatId         || '',
+                receiver_name:  gameRow.receiver_name|| '',
+                answer:         'PENDING',
+                score:          0,
+                level_reached:  0,
+                created_at:     new Date().toISOString()
+            };
+            await client.from('game_receipts').upsert(receiptPayload, {
+                onConflict: 'slug',
+                ignoreDuplicates: false
+            });
+            console.log('✅ Initial receipt saved to game_receipts:', receiptPayload);
+        } catch(receiptErr) {
+            console.warn('⚠️ game_receipts initial save failed (non-fatal):', receiptErr);
+        }
+        await sleep(200);
+
+        /* STEP 6 — complete */
+        setProgress(100, 'COMPLETE');
+        await sleep(450);
+
+        /* ACCESS GRANTED */
+        playAccessGranted();
+        document.getElementById('accessGranted').classList.add('show');
+        await sleep(1500);
+
+        /* 3-second preloader → game */
+        document.getElementById('sync-overlay').style.display = 'none';
+        document.getElementById('preloader').style.display = 'flex';
+        setTimeout(() => { window.location.href = 'game.html'; }, 3000);
+
+    } catch (e) {
+        console.error('startSync error:', e);
+        showError('CONNECTION FAILED');
+    }
+}
+
+/* Enter key */
+document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('accessCode')
+        .addEventListener('keydown', e => {
+            if (e.key !== 'Enter') playKeySound();
+            if (e.key === 'Enter') startSync();
+        });
+});
+
+/* ════════════════════════════════════════════════
+   WEB AUDIO — MYSTERY SOUND EFFECTS (no files)
+════════════════════════════════════════════════ */
+let _ac = null;
+function ac() {
+    if (!_ac) {
+        try { _ac = new (window.AudioContext || window.webkitAudioContext)(); } catch(e) {}
+    }
+    if (_ac && _ac.state === 'suspended') _ac.resume().catch(() => {});
+    return _ac;
+}
+
+function synthTone(freq, type, dur, vol, freqStart) {
+    const c = ac(); if (!c) return;
+    const o = c.createOscillator(), g = c.createGain();
+    const rev = c.createConvolver();
+    // simple reverb-like: connect direct + delayed
+    o.connect(g); g.connect(c.destination);
+    o.type = type || 'sine';
+    const t = c.currentTime;
+    if (freqStart && freqStart !== freq) {
+        o.frequency.setValueAtTime(freqStart, t);
+        o.frequency.exponentialRampToValueAtTime(freq, t + dur * 0.55);
+    } else {
+        o.frequency.setValueAtTime(freq, t);
+    }
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(vol || 0.22, t + 0.015);
+    g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+    o.start(t); o.stop(t + dur + 0.06);
+}
+
+function synthNoise(dur, vol, filterFreq) {
+    const c = ac(); if (!c) return;
+    const buf = c.createBuffer(1, c.sampleRate * dur, c.sampleRate);
+    const d   = buf.getChannelData(0);
+    for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+    const src  = c.createBufferSource();
+    const filt = c.createBiquadFilter();
+    const g    = c.createGain();
+    filt.type = 'bandpass'; filt.frequency.value = filterFreq || 600;
+    src.buffer = buf;
+    src.connect(filt); filt.connect(g); g.connect(c.destination);
+    const t = c.currentTime;
+    g.gain.setValueAtTime(vol || 0.12, t);
+    g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+    src.start(t); src.stop(t + dur + 0.06);
+}
+
+/* Mystery arpeggio intro sweep */
+function playIntroReveal() {
+    const notes = [110, 138.6, 165, 220, 277.2, 330];
+    notes.forEach((f, i) =>
+        setTimeout(() => synthTone(f, 'sine', 1.4, 0.18, f * 0.5), i * 700)
+    );
+    setTimeout(() => synthNoise(2, 0.06, 200), 200);
+}
+
+/* Key click */
+function playKeySound() {
+    synthNoise(0.04, 0.12, 1800);
+    synthTone(900, 'square', 0.035, 0.07);
+}
+
+/* Access granted fanfare — 7-note ascending */
+function playAccessGranted() {
+    const chord = [262, 330, 392, 523, 659, 784, 1047];
+    chord.forEach((f, i) =>
+        setTimeout(() => synthTone(f, 'sine', 0.55, 0.28), i * 85)
+    );
+    setTimeout(() => synthNoise(0.4, 0.1, 400), 100);
+}
+
+/* Error sound */
+function playError() {
+    [320, 210, 140].forEach((f, i) =>
+        setTimeout(() => synthTone(f, 'sawtooth', 0.2, 0.22), i * 110)
+    );
+}
+
+/* Fire intro sound on first user interaction */
+let _introPlayed = false;
+function tryPlayIntro() {
+    if (_introPlayed) return;
+    _introPlayed = true;
+    playIntroReveal();
+}
+document.addEventListener('click',   tryPlayIntro, { once: true });
+document.addEventListener('keydown', tryPlayIntro, { once: true });
+document.addEventListener('touchstart', tryPlayIntro, { once: true });
+</script>
+</body>
+</html>

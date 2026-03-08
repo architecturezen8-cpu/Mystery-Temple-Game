@@ -1,0 +1,1168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>📨 Telegram Messages — Mystery Temple</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Cinzel:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root {
+  --bg: #07050f;
+  --bg2: #0d0b1a;
+  --bg3: #12102a;
+  --bg4: #17142f;
+  --panel: rgba(15, 12, 31, 0.72);
+  --panel-strong: rgba(20, 16, 42, 0.92);
+  --border: rgba(100,80,180,0.22);
+  --border-bright: rgba(140,100,255,0.45);
+  --gold: #c9a87c;
+  --gold-glow: rgba(201,168,124,0.35);
+  --purple: #8b5cf6;
+  --purple-2: #a78bfa;
+  --purple-dim: rgba(139,92,246,0.18);
+  --green: #10b981;
+  --green-dim: rgba(16,185,129,0.15);
+  --red: #ef4444;
+  --red-dim: rgba(239,68,68,0.15);
+  --blue: #3b82f6;
+  --blue-dim: rgba(59,130,246,0.15);
+  --yellow: #f59e0b;
+  --text: #e2d9f0;
+  --text-muted: rgba(180,165,210,0.65);
+  --radius: 14px;
+  --radius-sm: 8px;
+  --font: 'Space Grotesk', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+  --font-title: 'Cinzel', serif;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  min-height: 100vh;
+  overflow-x: hidden;
+  background-image:
+    radial-gradient(circle at 10% 20%, rgba(139,92,246,0.15) 0%, transparent 28%),
+    radial-gradient(circle at 90% 10%, rgba(59,130,246,0.12) 0%, transparent 24%),
+    radial-gradient(circle at 50% 100%, rgba(201,168,124,0.1) 0%, transparent 30%),
+    linear-gradient(180deg, #05040c 0%, #0b0917 45%, #0a0814 100%);
+}
+
+html { scroll-behavior: smooth; }
+
+/* ── Background stars ── */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image:
+    radial-gradient(1px 1px at 20% 30%, rgba(255,255,255,0.4) 0%, transparent 100%),
+    radial-gradient(1px 1px at 80% 10%, rgba(255,255,255,0.3) 0%, transparent 100%),
+    radial-gradient(1px 1px at 50% 60%, rgba(200,180,255,0.3) 0%, transparent 100%),
+    radial-gradient(1px 1px at 10% 80%, rgba(255,255,255,0.2) 0%, transparent 100%),
+    radial-gradient(1px 1px at 70% 50%, rgba(255,255,255,0.25) 0%, transparent 100%),
+    radial-gradient(2px 2px at 35% 15%, rgba(200,180,255,0.2) 0%, transparent 100%),
+    radial-gradient(1px 1px at 90% 70%, rgba(255,255,255,0.3) 0%, transparent 100%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ── Top gradient glow ── */
+body::after {
+  content: '';
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  height: 280px;
+  background: radial-gradient(ellipse at 50% 0%, rgba(139,92,246,0.12) 0%, transparent 70%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ── Master loader ── */
+#masterLoader {
+  position: fixed; inset: 0; z-index: 9999;
+  background: var(--bg);
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 24px;
+  transition: opacity 0.5s;
+}
+#masterLoader.hide { opacity: 0; pointer-events: none; }
+.loader-icon { font-size: 2.5rem; animation: loaderPulse 1.2s ease-in-out infinite; }
+@keyframes loaderPulse { 0%,100%{transform:scale(1);opacity:0.7} 50%{transform:scale(1.15);opacity:1} }
+.loader-bar-wrap { width: 220px; height: 3px; background: rgba(139,92,246,0.2); border-radius: 2px; overflow: hidden; }
+.loader-bar { height: 100%; width: 0%; background: linear-gradient(90deg, var(--purple), var(--gold)); border-radius: 2px; transition: width 0.4s ease; }
+.loader-status { font-family: var(--font-mono); font-size: 0.72rem; color: var(--text-muted); letter-spacing: 2px; }
+
+/* ── Header ── */
+.top-header {
+  position: relative; z-index: 10;
+  padding: 20px 32px;
+  border-bottom: 1px solid rgba(167,139,250,0.16);
+  background: rgba(8, 6, 19, 0.72);
+  backdrop-filter: blur(20px) saturate(140%);
+  box-shadow: 0 10px 40px rgba(0,0,0,0.22);
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 16px; flex-wrap: wrap;
+}
+.header-brand { display: flex; align-items: center; gap: 12px; }
+.header-brand .icon { font-size: 1.4rem; }
+.header-brand .title { font-family: var(--font-title); font-size: 1.05rem; color: var(--gold); letter-spacing: 2px; }
+.header-brand .subtitle { font-size: 0.72rem; color: var(--text-muted); letter-spacing: 1px; margin-top: 2px; }
+.header-nav { display: flex; gap: 8px; flex-wrap: wrap; }
+.nav-link {
+  font-size: 0.78rem; color: var(--text-muted); text-decoration: none;
+  padding: 8px 14px; border: 1px solid rgba(255,255,255,0.08); border-radius: 999px;
+  transition: all 0.28s ease; letter-spacing: 0.5px;
+  display: flex; align-items: center; gap: 6px;
+  background: rgba(255,255,255,0.03);
+}
+.nav-link:hover { color: var(--gold); border-color: rgba(201,168,124,0.3); background: rgba(201,168,124,0.08); transform: translateY(-1px); }
+.nav-link.active { color: #f5ecff; border-color: rgba(167,139,250,0.45); background: linear-gradient(135deg, rgba(139,92,246,0.28), rgba(59,130,246,0.16)); box-shadow: 0 10px 30px rgba(139,92,246,0.18); }
+
+/* ── Layout ── */
+.page-wrap { position: relative; z-index: 1; max-width: 1240px; margin: 0 auto; padding: 36px 20px 96px; }
+
+.page-wrap::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(255,255,255,0.02), transparent 20%, transparent 80%, rgba(255,255,255,0.015));
+}
+
+/* ── Section titles ── */
+.section-head {
+  margin-bottom: 28px;
+  padding: 24px;
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 24px;
+  background: linear-gradient(180deg, rgba(16,12,34,0.86), rgba(11,9,24,0.7));
+  box-shadow: 0 24px 60px rgba(0,0,0,0.22);
+  backdrop-filter: blur(18px);
+}
+.section-head h2 { font-family: var(--font-title); font-size: 1.28rem; color: var(--gold); letter-spacing: 2px; display: flex; align-items: center; gap: 10px; }
+.section-head p { font-size: 0.84rem; color: var(--text-muted); margin-top: 8px; line-height: 1.7; max-width: 920px; }
+
+/* ── Game selector ── */
+.game-selector-wrap {
+  margin-bottom: 24px;
+  padding: 18px;
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 20px;
+  background: var(--panel);
+  backdrop-filter: blur(18px);
+  box-shadow: 0 18px 50px rgba(0,0,0,0.18);
+}
+.selector-label { font-size: 0.75rem; color: var(--text-muted); letter-spacing: 1px; margin-bottom: 8px; display: block; }
+.game-select {
+  width: 100%; max-width: 420px; padding: 12px 16px;
+  background: linear-gradient(180deg, rgba(27,22,51,0.92), rgba(16,13,31,0.92)); border: 1px solid rgba(167,139,250,0.18);
+  border-radius: 14px; color: var(--text); font-family: var(--font); font-size: 0.9rem;
+  cursor: pointer; outline: none; transition: border 0.25s, box-shadow 0.25s, transform 0.25s;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
+}
+.game-select:focus { border-color: rgba(167,139,250,0.45); box-shadow: 0 0 0 4px rgba(139,92,246,0.12); transform: translateY(-1px); }
+
+/* ── Message cards grid ── */
+.msg-grid { display: grid; gap: 22px; }
+
+/* ── Message card ── */
+.msg-card {
+  position: relative;
+  background: linear-gradient(180deg, rgba(22,18,43,0.94) 0%, rgba(13,10,28,0.92) 100%);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 22px;
+  overflow: hidden;
+  transition: border-color 0.28s ease, box-shadow 0.28s ease, transform 0.28s ease;
+  backdrop-filter: blur(16px);
+  box-shadow: 0 14px 40px rgba(0,0,0,0.18);
+}
+.msg-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(135deg, rgba(255,255,255,0.045), transparent 28%, transparent 72%, rgba(139,92,246,0.06));
+}
+.msg-card:hover { border-color: rgba(167,139,250,0.28); box-shadow: 0 22px 60px rgba(76,48,160,0.18); transform: translateY(-4px); }
+.msg-card.readonly { opacity: 0.6; pointer-events: none; }
+
+.card-top {
+  padding: 18px 20px 16px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 14px;
+}
+.card-info { display: flex; align-items: center; gap: 12px; flex: 1; min-width: 0; }
+.card-icon-wrap {
+  width: 46px; height: 46px; border-radius: 14px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.12rem; flex-shrink: 0;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.08), 0 10px 24px rgba(0,0,0,0.18);
+}
+.card-icon-wrap.green { background: var(--green-dim); border: 1px solid rgba(16,185,129,0.3); }
+.card-icon-wrap.red { background: var(--red-dim); border: 1px solid rgba(239,68,68,0.3); }
+.card-icon-wrap.blue { background: var(--blue-dim); border: 1px solid rgba(59,130,246,0.3); }
+.card-icon-wrap.yellow { background: rgba(245,158,11,0.12); border: 1px solid rgba(245,158,11,0.3); }
+.card-icon-wrap.purple { background: var(--purple-dim); border: 1px solid rgba(139,92,246,0.3); }
+.card-icon-wrap.gold { background: rgba(201,168,124,0.1); border: 1px solid rgba(201,168,124,0.3); }
+
+.card-name { font-size: 0.98rem; font-weight: 700; color: #f4eeff; }
+.card-desc { font-size: 0.76rem; color: var(--text-muted); margin-top: 4px; line-height: 1.55; }
+.card-badges {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
+  min-width: 0;
+}
+.badge {
+  font-size: 0.65rem; letter-spacing: 0.8px; padding: 5px 9px; border-radius: 999px;
+  font-family: var(--font-mono); font-weight: 500;
+}
+.badge.readonly-b { background: rgba(100,80,180,0.2); color: rgba(160,140,220,0.8); border: 1px solid rgba(100,80,180,0.3); }
+.badge.editable-b { background: var(--green-dim); color: var(--green); border: 1px solid rgba(16,185,129,0.3); }
+.badge.tg-b { background: rgba(59,130,246,0.12); color: #60a5fa; border: 1px solid rgba(59,130,246,0.25); }
+
+.anim-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.anim-chip {
+  appearance: none;
+  border: 1px solid rgba(167,139,250,0.22);
+  background: rgba(139,92,246,0.08);
+  color: #d9c9ff;
+  border-radius: 999px;
+  padding: 7px 12px;
+  font-size: 0.72rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: all 0.22s ease;
+}
+
+.anim-chip:hover {
+  transform: translateY(-1px);
+  background: rgba(139,92,246,0.18);
+  border-color: rgba(167,139,250,0.4);
+}
+
+.anim-chip:active {
+  transform: scale(0.98);
+}
+
+.card-body { padding: 20px; display: flex; flex-direction: column; gap: 16px; }
+
+/* ── Variables chips ── */
+.vars-row { display: flex; flex-wrap: wrap; gap: 6px; }
+.var-chip {
+  font-family: var(--font-mono); font-size: 0.68rem; padding: 3px 9px;
+  background: rgba(139,92,246,0.12); border: 1px solid rgba(139,92,246,0.26);
+  border-radius: 999px; color: #c7aefe; cursor: pointer; transition: all 0.2s ease;
+}
+.var-chip:hover { background: rgba(139,92,246,0.28); color: #f3e8ff; transform: translateY(-1px); }
+
+/* ── Textarea ── */
+.msg-textarea {
+  width: 100%; resize: vertical; min-height: 80px;
+  background: linear-gradient(180deg, rgba(10,8,22,0.92), rgba(14,11,29,0.9)); border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 16px; color: var(--text);
+  font-family: var(--font-mono); font-size: 0.82rem; line-height: 1.65;
+  padding: 14px 16px; outline: none; transition: border 0.24s ease, box-shadow 0.24s ease, transform 0.24s ease;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.03);
+}
+.msg-textarea:focus { border-color: rgba(167,139,250,0.42); background: rgba(10,8,22,0.96); box-shadow: 0 0 0 4px rgba(139,92,246,0.11); transform: translateY(-1px); }
+.msg-textarea[readonly] { cursor: not-allowed; color: var(--text-muted); }
+
+/* ── Row with label ── */
+.field-label { font-size: 0.72rem; color: var(--text-muted); letter-spacing: 0.8px; margin-bottom: 6px; display: flex; align-items: center; gap: 6px; }
+.field-label .dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; }
+.dot-green { background: var(--green); }
+.dot-red { background: var(--red); }
+.dot-blue { background: var(--blue); }
+.dot-gold { background: var(--gold); }
+.dot-purple { background: var(--purple); }
+
+/* ── Toggle row ── */
+.toggle-row { display: flex; align-items: center; gap: 10px; }
+.toggle-switch { position: relative; width: 40px; height: 22px; flex-shrink: 0; }
+.toggle-switch input { opacity: 0; width: 0; height: 0; }
+.toggle-slider {
+  position: absolute; inset: 0; cursor: pointer;
+  background: rgba(100,80,180,0.25); border: 1px solid var(--border);
+  border-radius: 11px; transition: all 0.3s;
+}
+.toggle-slider::before {
+  content: ''; position: absolute;
+  width: 16px; height: 16px; top: 2px; left: 2px;
+  background: var(--text-muted); border-radius: 50%; transition: all 0.3s;
+}
+input:checked + .toggle-slider { background: rgba(16,185,129,0.3); border-color: rgba(16,185,129,0.5); }
+input:checked + .toggle-slider::before { transform: translateX(18px); background: var(--green); }
+.toggle-label { font-size: 0.78rem; color: var(--text-muted); }
+
+/* ── Preview panel ── */
+.preview-wrap {
+  background: linear-gradient(180deg, rgba(18,29,43,0.92), rgba(14,22,34,0.94));
+  border: 1px solid rgba(96,165,250,0.16);
+  border-radius: 18px;
+  padding: 16px;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
+}
+.preview-head {
+  display: flex; align-items: center; gap: 8px; margin-bottom: 10px;
+  font-size: 0.7rem; color: rgba(100,180,255,0.7); letter-spacing: 1px;
+}
+.tg-bubble {
+  background: #2b5278; border-radius: 12px 12px 12px 4px;
+  padding: 10px 14px; max-width: 100%;
+  font-family: -apple-system, 'Segoe UI', sans-serif; font-size: 0.82rem;
+  color: #e8e8e8; line-height: 1.6; white-space: pre-wrap; word-break: break-word;
+}
+.tg-bubble strong { color: #fff; font-weight: 600; }
+.tg-bubble em { color: #a8c7e8; font-style: italic; }
+.tg-bubble code { background: rgba(0,0,0,0.3); padding: 1px 5px; border-radius: 3px; font-family: 'Courier New', monospace; font-size: 0.8em; }
+.tg-time { font-size: 0.65rem; color: rgba(255,255,255,0.4); text-align: right; margin-top: 4px; }
+
+/* ── Link section ── */
+.link-section {
+  border: 1px dashed rgba(167,139,250,0.22);
+  border-radius: 18px;
+  padding: 14px;
+  background: rgba(255,255,255,0.02);
+}
+.link-section-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.link-title { font-size: 0.75rem; color: var(--text-muted); letter-spacing: 0.8px; display: flex; align-items: center; gap: 6px; }
+.link-enable-toggle { display: flex; align-items: center; gap: 8px; }
+.link-row { display: flex; gap: 8px; }
+.link-input {
+  flex: 1; padding: 8px 12px;
+  background: rgba(7,5,15,0.6); border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 12px; color: var(--text); font-family: var(--font-mono); font-size: 0.78rem;
+  outline: none; transition: border 0.2s;
+}
+.link-input:focus { border-color: var(--border-bright); }
+.link-label-input {
+  width: 140px; padding: 8px 12px;
+  background: rgba(7,5,15,0.6); border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 12px; color: var(--text); font-family: var(--font); font-size: 0.78rem;
+  outline: none; transition: border 0.2s;
+}
+.link-label-input:focus { border-color: var(--border-bright); }
+
+/* ── Datetime footer ── */
+.datetime-row { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+.datetime-info { font-size: 0.72rem; color: var(--text-muted); display: flex; align-items: center; gap: 6px; }
+.datetime-badge { font-family: var(--font-mono); font-size: 0.68rem; background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.25); color: #fbbf24; padding: 2px 8px; border-radius: 4px; }
+
+/* ── Test button ── */
+.test-btn {
+  display: flex; align-items: center; gap: 6px; padding: 7px 16px;
+  background: var(--blue-dim); border: 1px solid rgba(59,130,246,0.35);
+  border-radius: 6px; color: #60a5fa; font-family: var(--font); font-size: 0.78rem;
+  cursor: pointer; transition: all 0.2s; white-space: nowrap;
+}
+.test-btn:hover { background: rgba(59,130,246,0.25); border-color: rgba(59,130,246,0.6); }
+.test-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* ── Save bar ── */
+.save-bar {
+  position: sticky; bottom: 0; left: 0; right: 0; z-index: 100;
+  background: rgba(8, 6, 18, 0.76); backdrop-filter: blur(22px) saturate(140%);
+  border-top: 1px solid rgba(255,255,255,0.08);
+  padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;
+  box-shadow: 0 -14px 40px rgba(0,0,0,0.2);
+}
+.save-status { font-size: 0.78rem; color: var(--text-muted); display: flex; align-items: center; gap: 8px; }
+.save-status .dot-status { width: 7px; height: 7px; border-radius: 50%; background: var(--text-muted); }
+.save-status.saved .dot-status { background: var(--green); animation: blink 1.5s ease-in-out 3; }
+.save-status.saving .dot-status { background: var(--yellow); animation: blink 0.5s ease-in-out infinite; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+.save-actions { display: flex; gap: 8px; }
+.btn-save {
+  display: flex; align-items: center; gap: 7px; padding: 10px 24px;
+  background: linear-gradient(135deg, rgba(139,92,246,0.95), rgba(59,130,246,0.8));
+  border: 1px solid rgba(167,139,250,0.42); border-radius: 14px;
+  color: white; font-family: var(--font); font-size: 0.85rem; font-weight: 600;
+  cursor: pointer; transition: all 0.25s ease; letter-spacing: 0.5px;
+  box-shadow: 0 12px 28px rgba(109,74,216,0.28);
+}
+.btn-save:hover { background: linear-gradient(135deg, rgba(167,139,250,1), rgba(59,130,246,0.95)); box-shadow: 0 16px 36px rgba(139,92,246,0.36); transform: translateY(-1px); }
+.btn-secondary {
+  display: flex; align-items: center; gap: 7px; padding: 10px 20px;
+  background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 14px; color: var(--text-muted);
+  font-family: var(--font); font-size: 0.85rem; cursor: pointer; transition: all 0.25s ease;
+}
+.btn-secondary:hover { border-color: rgba(167,139,250,0.26); color: var(--text); background: rgba(255,255,255,0.05); transform: translateY(-1px); }
+
+.msg-card,
+.section-head,
+.game-selector-wrap,
+.save-bar,
+.top-header {
+  animation: fadeSlideUp 0.7s ease both;
+}
+
+@keyframes fadeSlideUp {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Toast ── */
+#toast {
+  position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%) translateY(20px);
+  z-index: 9998; padding: 12px 20px; border-radius: 10px; font-size: 0.83rem;
+  font-weight: 500; pointer-events: none; opacity: 0; transition: all 0.3s;
+  display: flex; align-items: center; gap: 8px; white-space: nowrap;
+}
+#toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+#toast.success { background: rgba(16,185,129,0.2); border: 1px solid rgba(16,185,129,0.4); color: #6ee7b7; }
+#toast.error { background: rgba(239,68,68,0.2); border: 1px solid rgba(239,68,68,0.4); color: #fca5a5; }
+#toast.info { background: rgba(59,130,246,0.2); border: 1px solid rgba(59,130,246,0.4); color: #93c5fd; }
+
+/* ── Auth overlay ── */
+#authOverlay {
+  position: fixed; inset: 0; z-index: 9990;
+  background: rgba(7,5,15,0.96); backdrop-filter: blur(20px);
+  display: flex; align-items: center; justify-content: center;
+}
+.auth-box { text-align: center; max-width: 380px; padding: 40px 32px; }
+.auth-icon { font-size: 2.5rem; margin-bottom: 16px; }
+.auth-title { font-family: var(--font-title); font-size: 1.2rem; color: var(--gold); letter-spacing: 2px; margin-bottom: 8px; }
+.auth-sub { font-size: 0.8rem; color: var(--text-muted); margin-bottom: 24px; line-height: 1.5; }
+.auth-btn {
+  display: inline-flex; align-items: center; gap: 8px; padding: 12px 28px;
+  background: linear-gradient(135deg, rgba(139,92,246,0.8), rgba(100,60,200,0.8));
+  border: 1px solid rgba(139,92,246,0.5); border-radius: var(--radius-sm);
+  color: white; font-family: var(--font); font-size: 0.9rem; font-weight: 600;
+  cursor: pointer; transition: all 0.2s;
+}
+.auth-btn:hover { box-shadow: 0 4px 20px rgba(139,92,246,0.4); }
+
+/* ── Collapse / expand ── */
+.collapsible-body { overflow: hidden; transition: max-height 0.4s ease; }
+.collapse-btn {
+  background: none; border: none; color: var(--text-muted); cursor: pointer;
+  font-size: 0.78rem; display: flex; align-items: center; gap: 5px; transition: color 0.2s;
+  padding: 0;
+}
+.collapse-btn:hover { color: var(--text); }
+.collapse-icon { transition: transform 0.3s; display: inline-block; }
+.collapsed .collapse-icon { transform: rotate(-90deg); }
+
+/* ── Divider ── */
+.divider { height: 1px; background: var(--border); margin: 8px 0; }
+
+/* ── RESPONSIVE ── */
+@media (max-width: 768px) {
+    .top-header { padding: 14px 16px; gap: 10px; }
+    .header-brand .title { font-size: 0.9rem; letter-spacing: 1px; }
+    .page-wrap { padding: 20px 14px 100px; }
+    .section-head h2 { font-size: 1rem; }
+    .section-head, .game-selector-wrap { border-radius: 18px; padding: 18px; }
+    .card-top { grid-template-columns: 1fr; gap: 12px; }
+    .card-badges { justify-content: flex-start; gap: 5px; }
+    .msg-card { border-radius: 18px; }
+    .save-bar { padding: 12px 14px; flex-direction: column; align-items: stretch; gap: 8px; }
+    .save-actions { justify-content: stretch; gap: 6px; }
+    .btn-save, .btn-secondary { flex: 1; justify-content: center; padding: 10px; }
+    .tg-bubble { font-size: 0.78rem; }
+    .link-row { flex-direction: column; gap: 6px; }
+    .link-label-input { width: 100%; }
+    .var-chip { font-size: 0.65rem; }
+}
+
+@media (max-width: 480px) {
+    .top-header { flex-direction: column; align-items: flex-start; padding: 12px; }
+    .header-nav { width: 100%; overflow-x: auto; flex-wrap: nowrap; gap: 6px; scrollbar-width: none; }
+    .header-nav::-webkit-scrollbar { display: none; }
+    .nav-link { white-space: nowrap; flex-shrink: 0; font-size: 0.72rem; padding: 5px 10px; }
+    .page-wrap { padding: 14px 10px 100px; }
+    .section-head p { font-size: 0.75rem; }
+    .game-select { max-width: 100%; font-size: 0.83rem; }
+    .card-body { padding: 14px 12px; gap: 12px; }
+    .card-top { padding: 14px 12px; }
+    .card-info { align-items: flex-start; }
+    .card-icon-wrap { width: 40px; height: 40px; border-radius: 12px; }
+    .card-badges { width: 100%; }
+    .msg-textarea { font-size: 0.78rem; min-height: 70px; }
+    .preview-wrap { padding: 10px; }
+    .tg-bubble { font-size: 0.76rem; padding: 8px 10px; }
+    .datetime-row { flex-direction: column; align-items: flex-start; gap: 4px; }
+    .test-btn { padding: 6px 12px; font-size: 0.72rem; }
+    .vars-row { gap: 4px; }
+    .link-section { padding: 10px; }
+    .link-input, .link-label-input { font-size: 0.78rem; padding: 7px 10px; }
+    .save-bar { bottom: 0; }
+}
+
+@media (max-width: 360px) {
+    .card-info .card-icon-wrap { width: 34px; height: 34px; font-size: 0.95rem; }
+    .card-name { font-size: 0.82rem; }
+    .badge { font-size: 0.6rem; padding: 2px 6px; }
+}
+</style>
+</head>
+<body>
+
+<!-- Master Loader -->
+<div id="masterLoader">
+  <div class="loader-icon">📨</div>
+  <div class="loader-bar-wrap"><div class="loader-bar" id="loaderBar"></div></div>
+  <div class="loader-status" id="loaderStatus">CONNECTING TO SUPABASE...</div>
+</div>
+
+<!-- Auth Overlay -->
+<div id="authOverlay" style="display:none;">
+  <div class="auth-box">
+    <div class="auth-icon">🔒</div>
+    <div class="auth-title">AUTHENTICATION REQUIRED</div>
+    <div class="auth-sub">Sign in to manage your Telegram messages</div>
+    <button class="auth-btn" onclick="window.location.href='admin.html'"><i class="fas fa-sign-in-alt"></i> Go to Admin Panel</button>
+  </div>
+</div>
+
+<!-- Header -->
+<div class="top-header">
+  <div class="header-brand">
+    <span class="icon">📨</span>
+    <div>
+      <div class="title">TELEGRAM MESSAGES</div>
+      <div class="subtitle">MYSTERY TEMPLE — FULL CONTROL</div>
+    </div>
+  </div>
+  <nav class="header-nav">
+    <a href="admin.html" class="nav-link"><i class="fas fa-cog"></i> Game Config</a>
+    <a href="telegram-admin.html" class="nav-link active"><i class="fab fa-telegram"></i> Telegram</a>
+  </nav>
+</div>
+
+<div class="page-wrap">
+
+  <!-- Game Selector -->
+  <div class="game-selector-wrap">
+    <span class="selector-label">SELECT GAME</span>
+    <select class="game-select" id="gameSelect" onchange="loadGameConfig()">
+      <option value="">— Loading games... —</option>
+    </select>
+  </div>
+
+  <div class="section-head">
+    <h2><i class="fab fa-telegram"></i> Telegram Message Control</h2>
+    <p>Full control over every Telegram message sent by the bot. Use <code style="background:rgba(139,92,246,0.15);padding:1px 6px;border-radius:3px;font-size:0.85em;">{receiverName}</code>, <code style="background:rgba(139,92,246,0.15);padding:1px 6px;border-radius:3px;font-size:0.85em;">{ownerName}</code> etc. as dynamic variables. Telegram Markdown: *bold*, _italic_, `code`.</p>
+  </div>
+
+  <div class="msg-grid" id="msgGrid">
+    <!-- Cards injected by JS -->
+  </div>
+</div>
+
+<!-- Save Bar -->
+<div class="save-bar">
+  <div class="save-status" id="saveStatus">
+    <span class="dot-status"></span>
+    <span id="saveStatusText">Select a game to begin editing</span>
+  </div>
+  <div class="save-actions">
+    <button class="btn-secondary" onclick="resetMessages()"><i class="fas fa-undo"></i> Reset</button>
+    <button class="btn-save" id="saveBtn" onclick="saveMessages()" disabled><i class="fas fa-save"></i> Save Changes</button>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ── Supabase ──
+const db = window.supabase.createClient(
+  'https://hdqcehofpuinlatpkgml.supabase.co',
+  'sb_publishable_vq4f1sF543S-F_vNSDSaIg_iEl7oeX-'
+);
+
+let currentUser = null;
+let currentGame = null;
+let currentConfig = {};
+let isSaved = true;
+
+// ── Loader ──
+function setLoader(pct, text) {
+  document.getElementById('loaderBar').style.width = pct + '%';
+  document.getElementById('loaderStatus').textContent = text;
+}
+function hideLoader() {
+  const el = document.getElementById('masterLoader');
+  el.classList.add('hide');
+  setTimeout(() => el.style.display = 'none', 600);
+}
+
+// ── Toast ──
+function toast(msg, type = 'info') {
+  const t = document.getElementById('toast');
+  t.textContent = '';
+  const icons = { success: '✅', error: '❌', info: 'ℹ️' };
+  t.textContent = icons[type] + ' ' + msg;
+  t.className = 'show ' + type;
+  setTimeout(() => t.className = '', 3500);
+}
+
+// ── Time ──
+function nowSLT() {
+  const now = new Date();
+  const slt = new Date(now.getTime() + 5.5 * 3600000);
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  let h = slt.getUTCHours(), m = slt.getUTCMinutes().toString().padStart(2,'0');
+  const ap = h >= 12 ? 'PM' : 'AM'; h = h % 12 || 12;
+  return `${slt.getUTCFullYear()} ${months[slt.getUTCMonth()]} ${slt.getUTCDate()} · ${h}:${m} ${ap}`;
+}
+
+// ── Render Telegram markdown preview ──
+function renderTgMarkdown(text) {
+  if (!text) return '';
+  return text
+    .replace(/\*([^*]+)\*/g, '<strong>$1</strong>')
+    .replace(/_([^_]+)_/g, '<em>$1</em>')
+    .replace(/`([^`]+)`/g, '<code>$1</code>');
+}
+
+function updatePreview(textareaId, previewId, vars) {
+  const ta = document.getElementById(textareaId);
+  const pv = document.getElementById(previewId);
+  if (!ta || !pv) return;
+  let txt = ta.value;
+  // Apply variables
+  for (const [k, v] of Object.entries(vars || {})) {
+    txt = txt.replace(new RegExp(`\\{${k}\\}`, 'gi'), `<strong>${v}</strong>`);
+  }
+  pv.innerHTML = renderTgMarkdown(txt);
+}
+
+// ── Build preview vars from current game ──
+function getVars() {
+  if (!currentGame) return {};
+  const rn = titleCase(currentGame.receiver_name) || 'Kavisha';
+  const on = titleCase(currentGame.owner_name) || 'Owner';
+  return { receiverName: rn, playerName: rn, name: rn, receiver: rn, ownerName: on, owner: on };
+}
+
+function titleCase(s) {
+  return String(s || '').trim().split(/\s+/).map(w => w ? w[0].toUpperCase() + w.slice(1) : '').join(' ');
+}
+
+// ── Mark unsaved ──
+function markUnsaved() {
+  isSaved = false;
+  const ss = document.getElementById('saveStatus');
+  ss.className = 'save-status saving';
+  document.getElementById('saveStatusText').textContent = 'Unsaved changes';
+  document.getElementById('saveBtn').disabled = false;
+}
+
+// ── Insert variable at cursor ──
+function insertVar(taId, varName) {
+  const ta = document.getElementById(taId);
+  if (!ta) return;
+  const start = ta.selectionStart, end = ta.selectionEnd;
+  const val = ta.value;
+  ta.value = val.slice(0, start) + `{${varName}}` + val.slice(end);
+  ta.selectionStart = ta.selectionEnd = start + varName.length + 2;
+  ta.focus();
+  ta.dispatchEvent(new Event('input'));
+}
+
+function insertToken(taId, token) {
+  const ta = document.getElementById(taId);
+  if (!ta) return;
+  const start = ta.selectionStart, end = ta.selectionEnd;
+  const val = ta.value;
+  ta.value = val.slice(0, start) + token + val.slice(end);
+  ta.selectionStart = ta.selectionEnd = start + token.length;
+  ta.focus();
+  ta.dispatchEvent(new Event('input'));
+}
+
+// ── Build the message card HTML ──
+function buildCard(cfg) {
+  const {
+    id, icon, title, subtitle, colorClass,
+    fieldId, value, rows = 5, readonly = false,
+    vars = [], showPreview = true, showLink = false,
+    showDatetime = false, showToggle = false, toggleId = '', toggleLabel = '',
+    toggleValue = true
+  } = cfg;
+
+  const varChips = vars.map(v =>
+    `<span class="var-chip" onclick="insertVar('${fieldId}','${v}')">{${v}}</span>`
+  ).join('');
+
+  const animChips = !readonly ? `
+    <div>
+      <div class="field-label"><span class="dot dot-purple"></span> QUICK TELEGRAM STYLE TOKENS</div>
+      <div class="anim-toolbar">
+        <button type="button" class="anim-chip" onclick="insertToken('${fieldId}','*bold*')">Bold</button>
+        <button type="button" class="anim-chip" onclick="insertToken('${fieldId}','_italic_')">Italic</button>
+        <button type="button" class="anim-chip" onclick="insertToken('${fieldId}','\`code\`')">Code</button>
+        <button type="button" class="anim-chip" onclick="insertToken('${fieldId}','✨')">✨ Sparkle</button>
+        <button type="button" class="anim-chip" onclick="insertToken('${fieldId}','💖')">💖 Love</button>
+        <button type="button" class="anim-chip" onclick="insertToken('${fieldId}','🎮')">🎮 Game</button>
+      </div>
+    </div>` : '';
+
+  const readonlyAttr = readonly ? 'readonly style="cursor:not-allowed"' : '';
+  const badgeHtml = readonly
+    ? `<span class="badge readonly-b"><i class="fas fa-lock"></i> READ ONLY</span>`
+    : `<span class="badge editable-b"><i class="fas fa-edit"></i> EDITABLE</span>`;
+  badgeHtml + `<span class="badge tg-b"><i class="fab fa-telegram"></i> TELEGRAM</span>`;
+
+  const toggleHtml = showToggle ? `
+    <div class="toggle-row">
+      <label class="toggle-switch">
+        <input type="checkbox" id="${toggleId}" ${toggleValue ? 'checked' : ''} onchange="markUnsaved()">
+        <span class="toggle-slider"></span>
+      </label>
+      <span class="toggle-label">${toggleLabel}</span>
+    </div>` : '';
+
+  const datetimeHtml = showDatetime ? `
+    <div class="datetime-row">
+      <div class="datetime-info">
+        <i class="fas fa-clock" style="color:var(--yellow);font-size:0.75rem;"></i>
+        <span>Auto-appended: Date &amp; Time (Sri Lanka)</span>
+        <span class="datetime-badge" id="${fieldId}_time">${nowSLT()}</span>
+      </div>
+    </div>` : '';
+
+  const previewHtml = showPreview ? `
+    <div class="preview-wrap" id="${fieldId}_previewWrap">
+      <div class="preview-head">
+        <i class="fab fa-telegram"></i> TELEGRAM PREVIEW
+      </div>
+      <div class="tg-bubble" id="${fieldId}_preview"></div>
+      <div class="tg-time">${nowSLT()}</div>
+    </div>` : '';
+
+  const linkHtml = showLink ? `
+    <div class="link-section" id="${fieldId}_linkSection">
+      <div class="link-section-head">
+        <div class="link-title"><i class="fas fa-link"></i> INCLUDE BUTTON LINK</div>
+        <div class="link-enable-toggle">
+          <label class="toggle-switch" style="transform:scale(0.85)">
+            <input type="checkbox" id="${fieldId}_linkEnabled" onchange="toggleLinkVisibility('${fieldId}'); markUnsaved();">
+            <span class="toggle-slider"></span>
+          </label>
+          <span class="toggle-label" style="font-size:0.72rem;">Enable</span>
+        </div>
+      </div>
+      <div id="${fieldId}_linkFields" style="display:none; display:flex; flex-direction:column; gap:8px;">
+        <div class="link-row">
+          <input class="link-input" id="${fieldId}_linkUrl" placeholder="https://example.com" type="url" oninput="markUnsaved()">
+          <input class="link-label-input" id="${fieldId}_linkLabel" placeholder="Button Label" oninput="markUnsaved()">
+        </div>
+      </div>
+    </div>` : '';
+
+  const testHtml = !readonly ? `
+    <button class="test-btn" onclick="sendTestMessage('${fieldId}')" id="${fieldId}_testBtn">
+      <i class="fas fa-paper-plane"></i> Send Test
+    </button>` : '';
+
+  return `
+  <div class="msg-card${readonly ? ' readonly' : ''}" id="card_${id}">
+    <div class="card-top">
+      <div class="card-info">
+        <div class="card-icon-wrap ${colorClass}">${icon}</div>
+        <div>
+          <div class="card-name">${title}</div>
+          <div class="card-desc">${subtitle}</div>
+        </div>
+      </div>
+      <div class="card-badges">
+        ${badgeHtml}
+        <span class="badge tg-b"><i class="fab fa-telegram"></i> TG</span>
+        ${testHtml}
+      </div>
+    </div>
+    <div class="card-body">
+      ${toggleHtml}
+      ${vars.length ? `<div>
+        <div class="field-label">AVAILABLE VARIABLES — click to insert</div>
+        <div class="vars-row">${varChips}</div>
+      </div>` : ''}
+      ${animChips}
+      <div>
+        <textarea
+          class="msg-textarea"
+          id="${fieldId}"
+          rows="${rows}"
+          ${readonlyAttr}
+          oninput="markUnsaved(); updatePreview('${fieldId}','${fieldId}_preview', getVars())"
+        >${escHtml(value)}</textarea>
+      </div>
+      ${datetimeHtml}
+      ${linkHtml}
+      ${previewHtml}
+    </div>
+  </div>`;
+}
+
+function escHtml(s) {
+  return String(s || '')
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;');
+}
+
+function toggleLinkVisibility(fieldId) {
+  const cb = document.getElementById(fieldId + '_linkEnabled');
+  const f = document.getElementById(fieldId + '_linkFields');
+  if (f) f.style.display = cb && cb.checked ? 'flex' : 'none';
+}
+
+// ── Render all cards ──
+function renderCards(cfg, gameMeta) {
+  const rn = titleCase(gameMeta?.receiver_name) || 'Kavisha';
+  const on = titleCase(gameMeta?.owner_name) || 'Owner';
+
+  const cards = [
+    // 1. Bot Start message
+    {
+      id: 'botStart', icon: '🤖', colorClass: 'blue',
+      title: 'Bot Start Message',
+      subtitle: 'Sent when user types /start to the bot',
+      fieldId: 'msg_botStart',
+      value: cfg.msg_botStart || `🏛️ *Mystery Temple Bot*\n\n• Send your *player slug* (example: \`for-kavisha\`) to get your game link + access code.\n• Send your *owner slug* to register notifications.`,
+      rows: 6, showPreview: true, showLink: true,
+      vars: ['receiverName', 'ownerName'],
+    },
+    // 2. Player registration message
+    {
+      id: 'playerReg', icon: '🎮', colorClass: 'purple',
+      title: 'Player Registration Message',
+      subtitle: 'Sent to player when they register with their slug',
+      fieldId: 'msg_playerReg',
+      value: cfg.msg_playerReg || `🏛️ *Mystery Temple*\n\nDear *{receiverName}*,\n\n🔐 *Access Code:* \`{accessCode}\`\n🎮 *Game Link:* {gameLink}\n\n_Open the link and complete all levels to reveal the secret._ ✨`,
+      rows: 8, showPreview: true, showLink: false,
+      vars: ['receiverName', 'accessCode', 'gameLink'],
+    },
+    // 3. Player game complete message
+    {
+      id: 'playerComplete', icon: '💌', colorClass: 'gold',
+      title: 'Player Game Complete Message',
+      subtitle: 'Sent to player via Telegram when they finish all levels',
+      fieldId: 'telegramPlayerEnglish',
+      value: cfg.telegramPlayerEnglish || `I wanted to tell you I love you through this game... You are my world...`,
+      rows: 5, showPreview: true, showLink: true, showDatetime: true,
+      showToggle: true, toggleId: 'enablePlayerSinhala', toggleLabel: 'Include Sinhala message below',
+      toggleValue: cfg.enablePlayerSinhala !== false,
+      vars: ['receiverName', 'name'],
+    },
+    // 3b. Sinhala part
+    {
+      id: 'playerCompleteSinhala', icon: '🌸', colorClass: 'purple',
+      title: 'Player Message — Sinhala Part',
+      subtitle: 'Sinhala text appended to player game-complete message (if enabled above)',
+      fieldId: 'telegramPlayerSinhala',
+      value: cfg.telegramPlayerSinhala || `මම ඔයාට ආදරෙයි කියන්න හිටියේ මේ game එකෙන්... ඔයා මගේ ලෝකේ... 💕`,
+      rows: 4, showPreview: true, showLink: false,
+      vars: ['receiverName'],
+    },
+    // 3c. Full game complete message template (optional override)
+    {
+      id: 'playerCompleteMsg', icon: '📐', colorClass: 'gold',
+      title: 'Full Game Complete Message — Custom Template (Optional)',
+      subtitle: 'Override the entire message structure sent to the player on game completion. Leave blank to use the default layout. Available variables: {name}, {receiverName}, {otp}, {key}, {accessCode}, {date}, {time}, {englishMessage}, {sinhalaMessage}',
+      fieldId: 'playerCompleteMessage',
+      value: cfg.playerCompleteMessage || '',
+      rows: 12, showPreview: true, showLink: false,
+      vars: ['name', 'receiverName', 'otp', 'key', 'accessCode', 'date', 'time', 'englishMessage', 'sinhalaMessage'],
+    },
+    // 4. Owner YES response
+    {
+      id: 'ownerYes', icon: '✅', colorClass: 'green',
+      title: 'Owner: Player Said YES',
+      subtitle: 'Sent to YOU (owner) when player taps YES at the end',
+      fieldId: 'msg_ownerYes',
+      value: cfg.ownerYesResponse || `✅ *Good news!* 😊\n\nFeel free, bro.........  \n\n{receiverName} said *YES*! 💖`,
+      rows: 5, showPreview: true,
+      vars: ['receiverName', 'ownerName'],
+    },
+    // 5. Owner NO response
+    {
+      id: 'ownerNo', icon: '❌', colorClass: 'red',
+      title: 'Owner: Player Said NO',
+      subtitle: 'Sent to YOU (owner) when player taps NO at the end',
+      fieldId: 'msg_ownerNo',
+      value: cfg.ownerNoResponse || `❌ *Not this time.*\n\nSorry, bro............ \n\n{receiverName} said *NO*.\n\nMaybe she'll tell you another day.`,
+      rows: 6, showPreview: true,
+      vars: ['receiverName', 'ownerName'],
+    },
+    // 6. Error message
+    {
+      id: 'errorMsg', icon: '⚠️', colorClass: 'yellow',
+      title: 'Error / Invalid Slug Message',
+      subtitle: 'Sent when user types an invalid game code',
+      fieldId: 'msg_invalidSlug',
+      value: cfg.msg_invalidSlug || `❌ Invalid game code. Please check and try again.`,
+      rows: 3, showPreview: true, showLink: false,
+      vars: [],
+    },
+    // 7. Already claimed message
+    {
+      id: 'alreadyClaimed', icon: '🔐', colorClass: 'red',
+      title: 'Already Claimed Message',
+      subtitle: 'Sent when someone tries to claim an already-registered game',
+      fieldId: 'msg_alreadyClaimed',
+      value: cfg.msg_alreadyClaimed || `⚠️ This game code has already been claimed by someone else.`,
+      rows: 3, showPreview: true,
+      vars: [],
+    },
+    // 8. Owner already registered
+    {
+      id: 'ownerAlreadyReg', icon: '📋', colorClass: 'blue',
+      title: 'Owner Already Registered',
+      subtitle: 'Sent when owner tries to re-register their slug',
+      fieldId: 'msg_ownerAlreadyReg',
+      value: cfg.msg_ownerAlreadyReg || `✅ *Already registered as owner.*\n\n🎮 [Open Game]({gameLink})`,
+      rows: 4, showPreview: true, showLink: false,
+      vars: ['gameLink', 'ownerName'],
+    },
+  ];
+
+  const grid = document.getElementById('msgGrid');
+  grid.innerHTML = cards.map(buildCard).join('');
+
+  // Initial preview render
+  const v = getVars();
+  cards.forEach(c => {
+    updatePreview(c.fieldId, c.fieldId + '_preview', v);
+    // Init link visibility
+    if (c.showLink) toggleLinkVisibility(c.fieldId);
+  });
+
+  // Restore link data from config
+  restoreLinkData(cfg);
+}
+
+function restoreLinkData(cfg) {
+  const linkFields = ['msg_botStart', 'telegramPlayerEnglish'];
+  linkFields.forEach(fid => {
+    const cb = document.getElementById(fid + '_linkEnabled');
+    const urlEl = document.getElementById(fid + '_linkUrl');
+    const labelEl = document.getElementById(fid + '_linkLabel');
+    const key = fid + '_link';
+    if (cfg[key]) {
+      const lnk = cfg[key];
+      if (cb) cb.checked = !!lnk.enabled;
+      if (urlEl) urlEl.value = lnk.url || '';
+      if (labelEl) labelEl.value = lnk.label || '';
+      toggleLinkVisibility(fid);
+    }
+  });
+}
+
+// ── Load games into selector ──
+async function loadGames() {
+  const { data, error } = await db.from('game_configs')
+    .select('id, slug, player_slug, receiver_name, owner_name')
+    .eq('user_id', currentUser.id)
+    .order('created_at', { ascending: true });
+
+  const sel = document.getElementById('gameSelect');
+  if (error || !data?.length) {
+    sel.innerHTML = '<option value="">— No games found —</option>';
+    return;
+  }
+  sel.innerHTML = '<option value="">— Select a game —</option>' +
+    data.map(g => `<option value="${g.id}">${g.slug || g.player_slug} — ${titleCase(g.receiver_name)}</option>`).join('');
+}
+
+// ── Load config for selected game ──
+async function loadGameConfig() {
+  const gid = document.getElementById('gameSelect').value;
+  if (!gid) { document.getElementById('msgGrid').innerHTML = ''; return; }
+
+  // Load game meta (receiver_name, owner_name etc.)
+  const { data: gameData, error: gameErr } = await db.from('game_configs')
+    .select('id, slug, player_slug, receiver_name, owner_name, access_code')
+    .eq('id', gid).maybeSingle();
+
+  if (gameErr || !gameData) { toast('Failed to load game', 'error'); return; }
+
+  // Load bot settings from bot_settings table
+  const { data: bsData } = await db.from('bot_settings')
+    .select('settings').eq('game_id', gid).maybeSingle();
+
+  currentGame = gameData;
+  currentConfig = bsData?.settings || {};
+  renderCards(currentConfig, gameData);
+  isSaved = true;
+  setSaveStatus('idle', 'All changes saved');
+  document.getElementById('saveBtn').disabled = false;
+  toast('Game loaded: ' + titleCase(gameData.receiver_name), 'success');
+}
+
+function setSaveStatus(state, text) {
+  const el = document.getElementById('saveStatus');
+  el.className = 'save-status ' + (state === 'saved' ? 'saved' : state === 'saving' ? 'saving' : '');
+  document.getElementById('saveStatusText').textContent = text;
+}
+
+// ── Collect data from form ──
+function collectMessages() {
+  function gv(id) {
+    const el = document.getElementById(id);
+    return el ? el.value : '';
+  }
+  function gc(id) {
+    const el = document.getElementById(id);
+    return el ? el.checked : false;
+  }
+  function getLinkData(fid) {
+    const enabled = gc(fid + '_linkEnabled');
+    const url = gv(fid + '_linkUrl');
+    const label = gv(fid + '_linkLabel');
+    return { enabled, url, label };
+  }
+
+  return {
+    msg_botStart: gv('msg_botStart'),
+    msg_playerReg: gv('msg_playerReg'),
+    telegramPlayerEnglish: gv('telegramPlayerEnglish'),
+    telegramPlayerSinhala: gv('telegramPlayerSinhala'),
+    enablePlayerSinhala: gc('enablePlayerSinhala'),
+    playerCompleteMessage: gv('playerCompleteMessage'),
+    ownerYesResponse: gv('msg_ownerYes'),
+    ownerNoResponse: gv('msg_ownerNo'),
+    msg_invalidSlug: gv('msg_invalidSlug'),
+    msg_alreadyClaimed: gv('msg_alreadyClaimed'),
+    msg_ownerAlreadyReg: gv('msg_ownerAlreadyReg'),
+    msg_botStart_link: getLinkData('msg_botStart'),
+    telegramPlayerEnglish_link: getLinkData('telegramPlayerEnglish'),
+  };
+}
+
+// ── Save ──
+async function saveMessages() {
+  if (!currentGame) { toast('Select a game first', 'error'); return; }
+  setSaveStatus('saving', 'Saving...');
+  document.getElementById('saveBtn').disabled = true;
+
+  const msgs = collectMessages();
+  const newSettings = { ...currentConfig, ...msgs };
+
+  // Save to bot_settings table (upsert by game_id)
+  const { error } = await db.from('bot_settings')
+    .upsert({ game_id: currentGame.id, settings: newSettings }, { onConflict: 'game_id' });
+
+  if (error) {
+    setSaveStatus('idle', 'Save failed!');
+    toast('Save failed: ' + error.message, 'error');
+    document.getElementById('saveBtn').disabled = false;
+    return;
+  }
+  currentConfig = newSettings;
+  isSaved = true;
+  setSaveStatus('saved', '✅ All changes saved');
+  toast('Messages saved successfully!', 'success');
+  setTimeout(() => {
+    if (isSaved) setSaveStatus('idle', 'All changes saved');
+  }, 3000);
+}
+
+// ── Reset ──
+function resetMessages() {
+  if (!currentGame) return;
+  if (!confirm('Reset all messages to defaults?')) return;
+  currentConfig = {};
+  renderCards(currentConfig, currentGame);
+  markUnsaved();
+  toast('Reset to defaults', 'info');
+}
+
+// ── Send Test Message ──
+async function sendTestMessage(fieldId) {
+  if (!currentGame) { toast('Select a game first', 'error'); return; }
+
+  const btn = document.getElementById(fieldId + '_testBtn');
+  if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending...'; }
+
+  // Get bot URL from vercel config
+  const BOT_URL = 'https://telegram-bot-ten-bay.vercel.app/api/bot';
+
+  try {
+    // Get owner chat id
+    const ownerChatId = currentGame.owner_chat_id;
+    if (!ownerChatId) {
+      toast('Owner not registered in Telegram yet', 'error');
+      if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-paper-plane"></i> Send Test'; }
+      return;
+    }
+
+    const msgText = document.getElementById(fieldId)?.value || '';
+    const vars = getVars();
+    let finalText = msgText;
+    for (const [k, v] of Object.entries(vars)) {
+      finalText = finalText.replace(new RegExp(`\\{${k}\\}`, 'gi'), v);
+    }
+
+    const res = await fetch(BOT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'send_test',
+        chat_id: ownerChatId,
+        message: `🧪 *TEST MESSAGE*\n\n` + finalText
+      })
+    });
+
+    if (res.ok) {
+      toast('Test message sent to your Telegram!', 'success');
+    } else {
+      toast('Test failed — check bot is running', 'error');
+    }
+  } catch(e) {
+    toast('Network error: ' + e.message, 'error');
+  } finally {
+    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-paper-plane"></i> Send Test'; }
+  }
+}
+
+// ── Init ──
+async function init() {
+  setLoader(20, 'CONNECTING TO SUPABASE...');
+
+  const { data: { session } } = await db.auth.getSession();
+  setLoader(60, 'CHECKING SESSION...');
+
+  if (!session?.user) {
+    hideLoader();
+    document.getElementById('authOverlay').style.display = 'flex';
+    return;
+  }
+
+  currentUser = session.user;
+  setLoader(80, 'LOADING GAMES...');
+
+  await loadGames();
+  setLoader(100, 'READY');
+  setTimeout(hideLoader, 400);
+}
+
+// ── Auto-update datetime badges ──
+setInterval(() => {
+  document.querySelectorAll('[id$="_time"]').forEach(el => el.textContent = nowSLT());
+}, 30000);
+
+init();
+</script>
+</body>
+</html>
