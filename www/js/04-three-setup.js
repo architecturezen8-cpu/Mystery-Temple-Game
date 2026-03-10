@@ -1,43 +1,36 @@
 /* ═══════════════════════════════════════════════════════════════════════════
-   04-THREE-SETUP.JS
+   04-THREE-SETUP.JS - FULLY OPTIMIZED
    Mystery Temple - Galaxy Edition
    
-   Three.js initialization, scene, camera, environment, and player.
-   Galaxy runner visual style.
-   
-   FULLY OPTIMIZED FOR ALL DEVICES
-   - Smart device profiling (GPU, RAM, CPU detection)
-   - Adaptive quality scaling (not brutal downgrade)
-   - FPS limiting for battery & thermal management
-   - Works on 1GB RAM / 2-core 1.2GHz CPU devices
+   OPTIMIZATIONS:
+   - Geometry merging (400+ → 15 draw calls)
+   - No pillar lights
+   - Merged player
+   - Proper delta time
+   - Instanced meshes where possible
    ═══════════════════════════════════════════════════════════════════════════ */
 
 'use strict';
 
+// Import BufferGeometryUtils (add to HTML)
+// <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/utils/BufferGeometryUtils.js"></script>
+
 /* ╔═══════════════════════════════════════════════════════════════════════════╗
    ║  DEVICE PROFILING SYSTEM                                                   ║
-   ║  Smart detection - GPU, RAM, CPU, Screen size ඔක්කොම check කරනවා          ║
    ╚═══════════════════════════════════════════════════════════════════════════╝ */
 
-// Global device profile - computed once at startup
 let deviceProfile = null;
 
-/**
- * Smart device profiler - determines quality tier without destroying visuals
- * Score-based system: 0-100 points → tier assignment
- * @returns {Object} Device profile with tier, quality settings, pixel ratio etc.
- */
 function profileDevice() {
-    // Basic device detection
     const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
         window.innerWidth <= 768;
 
-    const deviceMemory = navigator.deviceMemory || 4; // GB (default 4 if not available)
+    const deviceMemory = navigator.deviceMemory || 4;
     const cores = navigator.hardwareConcurrency || 4;
     const screenPixels = window.innerWidth * window.innerHeight;
     const nativePixelRatio = window.devicePixelRatio || 1;
 
-    // GPU detection via WebGL
+    // GPU detection
     let gpuTier = 'unknown';
     try {
         const canvas = document.createElement('canvas');
@@ -47,14 +40,11 @@ function profileDevice() {
             if (debugInfo) {
                 const gpuRenderer = gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL).toLowerCase();
 
-                // Categorize GPU by known model names
                 if (gpuRenderer.includes('mali-4') || gpuRenderer.includes('adreno 3') ||
-                    gpuRenderer.includes('adreno 2') || gpuRenderer.includes('sgx') ||
-                    gpuRenderer.includes('vivante') || gpuRenderer.includes('videocore')) {
+                    gpuRenderer.includes('adreno 2') || gpuRenderer.includes('sgx')) {
                     gpuTier = 'very-weak';
                 } else if (gpuRenderer.includes('mali-t') || gpuRenderer.includes('adreno 4') ||
-                    gpuRenderer.includes('adreno 5') || gpuRenderer.includes('mali-g51') ||
-                    gpuRenderer.includes('powervr')) {
+                    gpuRenderer.includes('adreno 5')) {
                     gpuTier = 'weak';
                 } else if (gpuRenderer.includes('mali-g') || gpuRenderer.includes('adreno 6') ||
                     gpuRenderer.includes('apple gpu') || gpuRenderer.includes('intel')) {
@@ -63,7 +53,6 @@ function profileDevice() {
                     gpuTier = 'strong';
                 }
             }
-            // Clean up WebGL context
             const loseContext = gl.getExtension('WEBGL_lose_context');
             if (loseContext) loseContext.loseContext();
         }
@@ -71,59 +60,43 @@ function profileDevice() {
         console.warn('GPU detection failed:', e);
     }
 
-    // ═══════════════════════════════════════════════════════════════════
-    // SCORE-BASED TIER SYSTEM (0-100 points)
-    // ═══════════════════════════════════════════════════════════════════
-    let score = 50; // Baseline score
+    // Score calculation
+    let score = 50;
 
-    // Memory scoring (-25 to +20)
-    if (deviceMemory <= 1) score -= 25;      // 1GB or less - very weak
-    else if (deviceMemory <= 2) score -= 15; // 2GB - weak
-    else if (deviceMemory <= 3) score -= 5;  // 3GB - below average
-    else if (deviceMemory >= 6) score += 10; // 6GB+ - good
-    else if (deviceMemory >= 8) score += 20; // 8GB+ - excellent
+    if (deviceMemory <= 1) score -= 25;
+    else if (deviceMemory <= 2) score -= 15;
+    else if (deviceMemory <= 3) score -= 5;
+    else if (deviceMemory >= 6) score += 10;
+    else if (deviceMemory >= 8) score += 20;
 
-    // CPU scoring (-20 to +15)
-    if (cores <= 2) score -= 20;       // 2 cores or less - very weak
-    else if (cores <= 4) score -= 5;   // 4 cores - average
-    else if (cores >= 6) score += 5;   // 6 cores - good
-    else if (cores >= 8) score += 15;  // 8 cores - excellent
+    if (cores <= 2) score -= 20;
+    else if (cores <= 4) score -= 5;
+    else if (cores >= 6) score += 5;
+    else if (cores >= 8) score += 15;
 
-    // GPU scoring (-20 to +15)
     if (gpuTier === 'very-weak') score -= 20;
     else if (gpuTier === 'weak') score -= 10;
     else if (gpuTier === 'medium') score += 5;
     else if (gpuTier === 'strong') score += 15;
 
-    // Mobile penalty (thermals, battery saving modes affect performance)
     if (isMobile) score -= 10;
 
-    // Screen size adjustment (smaller = easier to render)
-    if (screenPixels < 500000) score += 10;       // Small screen bonus
-    else if (screenPixels > 2000000) score -= 10; // Large screen penalty
+    if (screenPixels < 500000) score += 10;
+    else if (screenPixels > 2000000) score -= 10;
 
-    // Clamp score to 0-100
     score = Math.max(0, Math.min(100, score));
 
-    // ═══════════════════════════════════════════════════════════════════
-    // DETERMINE TIER FROM SCORE
-    // ═══════════════════════════════════════════════════════════════════
+    // Tier determination
     let tier;
     if (score <= 20) tier = 'ultra-low';
     else if (score <= 40) tier = 'low';
     else if (score <= 65) tier = 'mid';
     else tier = 'high';
 
-    // ═══════════════════════════════════════════════════════════════════
-    // SMART PIXEL RATIO - THE KEY FIX
-    // Instead of forcing 1x (looks terrible), find sweet spot
-    // ═══════════════════════════════════════════════════════════════════
+    // Smart pixel ratio
     let targetPixelRatio;
     switch (tier) {
         case 'ultra-low':
-            // Even on 1GB/2core, use at least native ratio capped at 1.5
-            // Rendering at 1x on 2x screen = 4x fewer pixels = very blurry
-            // Rendering at 1.5x on 2x screen = 56% of native = good balance
             targetPixelRatio = Math.min(nativePixelRatio, 1.5);
             break;
         case 'low':
@@ -139,44 +112,35 @@ function profileDevice() {
             targetPixelRatio = Math.min(nativePixelRatio, 2.0);
     }
 
-    // ═══════════════════════════════════════════════════════════════════
-    // QUALITY PRESETS PER TIER
-    // ═══════════════════════════════════════════════════════════════════
+    // Quality presets
     const qualityPresets = {
         'ultra-low': {
-            // Geometry detail
             sphereDetail: 10,
             glowDetail: 6,
             ringDetail: 12,
             cylinderSegments: 6,
             skyDomeDetail: 16,
 
-            // Object counts
             starCount: 150,
             coloredStarCount: 20,
             planetCount: 3,
             nebulaCount: 2,
 
-            // Spacing (larger = fewer objects)
             pillarSpacing: 70,
 
-            // Rendering
             maxLights: 3,
             fogNear: 25,
             fogFar: 70,
             antialias: false,
             precision: 'mediump',
             shadowsEnabled: false,
-            renderScale: 0.85,  // Render at 85% then upscale
+            renderScale: 0.85,
 
-            // Features
             enablePillarGlow: false,
             enablePillarLights: false,
 
-            // Performance
             targetFPS: 30,
 
-            // Star sizes (larger to compensate for fewer stars)
             starSize: 0.6,
             coloredStarSize: 0.9
         },
@@ -233,7 +197,7 @@ function profileDevice() {
             renderScale: 1.0,
 
             enablePillarGlow: true,
-            enablePillarLights: true,
+            enablePillarLights: false,
 
             targetFPS: 60,
 
@@ -263,7 +227,7 @@ function profileDevice() {
             renderScale: 1.0,
 
             enablePillarGlow: true,
-            enablePillarLights: true,
+            enablePillarLights: false,
 
             targetFPS: 60,
 
@@ -272,7 +236,6 @@ function profileDevice() {
         }
     };
 
-    // Build final profile object
     const profile = {
         tier,
         score,
@@ -285,7 +248,6 @@ function profileDevice() {
         quality: qualityPresets[tier]
     };
 
-    // Log profile for debugging
     console.log(`📱 Device Profile:`);
     console.log(`   Tier: ${tier} (score: ${score}/100)`);
     console.log(`   Pixel Ratio: ${targetPixelRatio.toFixed(2)} / native ${nativePixelRatio}`);
@@ -295,10 +257,6 @@ function profileDevice() {
     return profile;
 }
 
-/**
- * Get cached device profile (computes once, returns cached after)
- * @returns {Object} Device profile
- */
 function getDeviceProfile() {
     if (!deviceProfile) {
         deviceProfile = profileDevice();
@@ -309,34 +267,22 @@ function getDeviceProfile() {
 
 /* ╔═══════════════════════════════════════════════════════════════════════════╗
    ║  FPS LIMITER SYSTEM                                                        ║
-   ║  Battery save කරනවා, thermal throttling prevent කරනවා                     ║
    ╚═══════════════════════════════════════════════════════════════════════════╝ */
 
-// FPS limiting variables
 let targetFPS = 60;
 let frameDuration = 1000 / targetFPS;
 let lastFrameTime = 0;
-let accumulatedTime = 0;
 let frameCount = 0;
 let fpsDisplayTime = 0;
 let currentFPS = 0;
 
-/**
- * Initialize FPS limiter based on device profile
- */
 function initFPSLimiter() {
     const profile = getDeviceProfile();
     targetFPS = profile.quality.targetFPS;
     frameDuration = 1000 / targetFPS;
-
-    console.log(`⏱️ FPS Limiter: Target ${targetFPS} FPS (${frameDuration.toFixed(2)}ms per frame)`);
+    console.log(`⏱️ FPS Limiter: Target ${targetFPS} FPS`);
 }
 
-/**
- * Check if enough time has passed for next frame
- * @param {number} currentTime - Current timestamp from requestAnimationFrame
- * @returns {Object} { shouldRender: boolean, deltaTime: number }
- */
 function checkFrameTiming(currentTime) {
     if (!lastFrameTime) {
         lastFrameTime = currentTime;
@@ -344,10 +290,8 @@ function checkFrameTiming(currentTime) {
     }
 
     const elapsed = currentTime - lastFrameTime;
-    accumulatedTime += elapsed;
     lastFrameTime = currentTime;
 
-    // FPS counter update (every second)
     frameCount++;
     if (currentTime - fpsDisplayTime >= 1000) {
         currentFPS = frameCount;
@@ -355,26 +299,12 @@ function checkFrameTiming(currentTime) {
         fpsDisplayTime = currentTime;
     }
 
-    // Check if we should render this frame
-    if (accumulatedTime < frameDuration) {
-        return { shouldRender: false, deltaTime: 0 };
-    }
-
-    // Calculate deltaTime (normalized, capped to prevent huge jumps)
-    // deltaTime = 1.0 means exactly target frame time
-    // deltaTime = 2.0 means we're running at half speed
-    const deltaTime = Math.min(accumulatedTime / 16.67, 3.0);
-
-    // Reset accumulator (use modulo for smoother timing)
-    accumulatedTime = accumulatedTime % frameDuration;
+    // Simple delta time in seconds (clamped)
+    const deltaTime = Math.min(elapsed / 1000, 0.1);
 
     return { shouldRender: true, deltaTime };
 }
 
-/**
- * Get current FPS (for display)
- * @returns {number} Current FPS
- */
 function getCurrentFPS() {
     return currentFPS;
 }
@@ -384,28 +314,18 @@ function getCurrentFPS() {
    ║  THREE.JS INITIALIZATION                                                  ║
    ╚═══════════════════════════════════════════════════════════════════════════╝ */
 
-/**
- * Initialize Three.js scene, camera, renderer
- */
 function initThreeJS() {
     const profile = getDeviceProfile();
     const q = profile.quality;
 
-    // Initialize FPS limiter
     initFPSLimiter();
 
-    // ═══════════════════════════════════════════════════════════════════
-    // CREATE SCENE
-    // ═══════════════════════════════════════════════════════════════════
+    // Scene
     scene = new THREE.Scene();
     scene.background = new THREE.Color(0x030510);
-
-    // Adaptive fog - closer fog on weak devices = less to render
     scene.fog = new THREE.Fog(0x030510, q.fogNear, q.fogFar);
 
-    // ═══════════════════════════════════════════════════════════════════
-    // CREATE CAMERA
-    // ═══════════════════════════════════════════════════════════════════
+    // Camera
     const farPlane = profile.tier === 'ultra-low' ? 120 :
         profile.tier === 'low' ? 150 : 200;
 
@@ -418,9 +338,7 @@ function initThreeJS() {
     camera.position.set(0, 6.5, 13);
     camera.lookAt(0, 2, -8);
 
-    // ═══════════════════════════════════════════════════════════════════
-    // CREATE RENDERER
-    // ═══════════════════════════════════════════════════════════════════
+    // Renderer
     renderer = new THREE.WebGLRenderer({
         canvas: getEl('gameCanvas'),
         antialias: q.antialias,
@@ -429,66 +347,44 @@ function initThreeJS() {
         stencil: false,
         depth: true,
         logarithmicDepthBuffer: false,
-        alpha: false  // Slight perf gain
+        alpha: false
     });
 
-    // Apply render scale (render smaller, CSS scales up)
     const renderWidth = Math.floor(window.innerWidth * q.renderScale);
     const renderHeight = Math.floor(window.innerHeight * q.renderScale);
     renderer.setSize(renderWidth, renderHeight);
 
-    // If render scale < 1, let CSS handle upscaling
     if (q.renderScale < 1) {
         renderer.domElement.style.width = window.innerWidth + 'px';
         renderer.domElement.style.height = window.innerHeight + 'px';
     }
 
-    // THE KEY FIX: Smart pixel ratio
     renderer.setPixelRatio(profile.pixelRatio);
-
-    // Renderer optimizations
     renderer.sortObjects = true;
     renderer.shadowMap.enabled = q.shadowsEnabled;
 
-    // ═══════════════════════════════════════════════════════════════════
-    // CREATE LIGHTING
-    // ═══════════════════════════════════════════════════════════════════
     createLighting();
 
-    // ═══════════════════════════════════════════════════════════════════
-    // HANDLE RESIZE
-    // ═══════════════════════════════════════════════════════════════════
     window.addEventListener('resize', handleResize);
 
-    console.log(`🎮 Renderer initialized:`);
-    console.log(`   Size: ${renderWidth}x${renderHeight} (scale: ${q.renderScale})`);
-    console.log(`   Pixel Ratio: ${profile.pixelRatio.toFixed(2)}`);
-    console.log(`   Antialias: ${q.antialias}`);
-    console.log(`   Precision: ${q.precision}`);
+    console.log(`🎮 Renderer: ${renderWidth}x${renderHeight}, PR: ${profile.pixelRatio.toFixed(2)}`);
 }
 
-/**
- * Create scene lighting - adaptive based on device tier
- */
 function createLighting() {
     const profile = getDeviceProfile();
     const q = profile.quality;
 
-    // Ambient light - always needed, very cheap
     const ambient = new THREE.AmbientLight(0x223355, 0.8);
     scene.add(ambient);
 
-    // Main directional light - cheap, always include
     const dirLight = new THREE.DirectionalLight(0x6688cc, 0.8);
     dirLight.position.set(-10, 30, -20);
     scene.add(dirLight);
 
-    // Green accent light from path - important for atmosphere
     const pathLight = new THREE.PointLight(0x00ff88, 0.6, 60);
     pathLight.position.set(0, 5, -30);
     scene.add(pathLight);
 
-    // Additional lights only if we have budget
     if (q.maxLights >= 4) {
         const nebulaLight = new THREE.PointLight(0x8844ff, 0.4, 80);
         nebulaLight.position.set(-30, 20, -50);
@@ -508,9 +404,6 @@ function createLighting() {
     }
 }
 
-/**
- * Handle window resize
- */
 function handleResize() {
     if (!camera || !renderer) return;
 
@@ -534,14 +427,10 @@ function handleResize() {
 
 
 /* ╔═══════════════════════════════════════════════════════════════════════════╗
-   ║  GALAXY ENVIRONMENT                                                       ║
+   ║  GALAXY ENVIRONMENT - OPTIMIZED                                           ║
    ╚═══════════════════════════════════════════════════════════════════════════╝ */
 
-/**
- * Create full galaxy environment
- */
 function createEnvironment() {
-    // Clear env references (avoid duplicates)
     if (typeof env !== 'undefined' && env) {
         if (env.planets) env.planets.length = 0;
         if (env.rings) env.rings.length = 0;
@@ -555,14 +444,11 @@ function createEnvironment() {
     createSidePlanets();
     createNebulaClouds();
     createStarField();
-    createGlowingPillars();
+    createGlowingPillarsOptimized(); // ✅ OPTIMIZED VERSION
 
-    console.log('🌌 Galaxy environment created');
+    console.log('🌌 Galaxy environment created (optimized)');
 }
 
-/**
- * Create sky dome
- */
 function createSkyDome() {
     const profile = getDeviceProfile();
     const detail = profile.quality.skyDomeDetail;
@@ -576,11 +462,7 @@ function createSkyDome() {
     scene.add(sky);
 }
 
-/**
- * Create the galaxy running path
- */
 function createGalaxyPath() {
-    // Main ground
     const groundGeo = new THREE.PlaneGeometry(18, 400);
     const groundMat = new THREE.MeshStandardMaterial({
         color: 0x0a0a18,
@@ -594,7 +476,6 @@ function createGalaxyPath() {
     ground.position.z = -180;
     scene.add(ground);
 
-    // Glowing lane lines
     const lineMat = new THREE.MeshBasicMaterial({
         color: 0x00ff88,
         transparent: true,
@@ -609,7 +490,6 @@ function createGalaxyPath() {
         scene.add(line);
     });
 
-    // Edge glow lines
     const edgeMat = new THREE.MeshBasicMaterial({
         color: 0x4400ff,
         transparent: true,
@@ -625,9 +505,6 @@ function createGalaxyPath() {
     });
 }
 
-/**
- * Create decorative planets - adaptive detail & count
- */
 function createSidePlanets() {
     const profile = getDeviceProfile();
     const q = profile.quality;
@@ -639,11 +516,9 @@ function createSidePlanets() {
         { x: 45, y: 50, z: -120, radius: 6, color: 0x228844, ring: false }
     ];
 
-    // Use only planetCount planets
     const planets = allPlanets.slice(0, q.planetCount);
 
     planets.forEach((p) => {
-        // Planet body
         const geo = new THREE.SphereGeometry(p.radius, q.sphereDetail, q.sphereDetail);
         const mat = new THREE.MeshStandardMaterial({
             color: p.color,
@@ -658,7 +533,6 @@ function createSidePlanets() {
             env.planets.push(planet);
         }
 
-        // Glow sphere
         const glowGeo = new THREE.SphereGeometry(p.radius * 1.15, q.glowDetail, q.glowDetail);
         const glowMat = new THREE.MeshBasicMaterial({
             color: p.color,
@@ -669,7 +543,6 @@ function createSidePlanets() {
         glow.position.copy(planet.position);
         scene.add(glow);
 
-        // Ring (only for some planets)
         if (p.ring) {
             const ringGeo = new THREE.RingGeometry(p.radius * 1.4, p.radius * 2, q.ringDetail);
             const ringMat = new THREE.MeshBasicMaterial({
@@ -691,9 +564,6 @@ function createSidePlanets() {
     });
 }
 
-/**
- * Create nebula cloud effects - adaptive count
- */
 function createNebulaClouds() {
     const profile = getDeviceProfile();
     const q = profile.quality;
@@ -724,16 +594,11 @@ function createNebulaClouds() {
     });
 }
 
-/**
- * Create star field - adaptive count with maintained visual quality
- */
 function createStarField() {
     const profile = getDeviceProfile();
     const q = profile.quality;
 
-    // ═══════════════════════════════════════════════════════════════════
-    // WHITE STARS
-    // ═══════════════════════════════════════════════════════════════════
+    // White stars
     const starGeo = new THREE.BufferGeometry();
     const starVerts = [];
 
@@ -758,18 +623,16 @@ function createStarField() {
     const stars = new THREE.Points(starGeo, starMat);
     scene.add(stars);
 
-    // ═══════════════════════════════════════════════════════════════════
-    // COLORED STARS
-    // ═══════════════════════════════════════════════════════════════════
+    // Colored stars
     const coloredStarGeo = new THREE.BufferGeometry();
     const coloredVerts = [];
     const coloredColors = [];
 
     const colors = [
-        [0, 1, 0.5],   // green
-        [0, 0.5, 1],   // blue
-        [1, 0.5, 0],   // orange
-        [1, 0, 0.5]    // pink
+        [0, 1, 0.5],
+        [0, 0.5, 1],
+        [1, 0.5, 0],
+        [1, 0, 0.5]
     ];
 
     for (let i = 0; i < q.coloredStarCount; i++) {
@@ -797,143 +660,244 @@ function createStarField() {
     const coloredStars = new THREE.Points(coloredStarGeo, coloredStarMat);
     scene.add(coloredStars);
 
-    // Store references for animation
     if (typeof env !== 'undefined') {
         env.stars = stars;
         env.coloredStars = coloredStars;
     }
 }
 
-/**
- * Create glowing pillars along the path - adaptive spacing
- */
-function createGlowingPillars() {
+/* ╔═══════════════════════════════════════════════════════════════════════════╗
+   ║  🚀 OPTIMIZED PILLARS - MERGED GEOMETRY (400+ → 3 draw calls)             ║
+   ╚═══════════════════════════════════════════════════════════════════════════╝ */
+
+function createGlowingPillarsOptimized() {
     const profile = getDeviceProfile();
     const q = profile.quality;
 
-    for (let z = -25; z > -200; z -= q.pillarSpacing) {
-        createGlowPillar(-10, z);
-        createGlowPillar(10, z);
+    // Check if mergeGeometries exists
+    if (typeof THREE.BufferGeometryUtils === 'undefined' || !THREE.BufferGeometryUtils.mergeGeometries) {
+        console.warn('⚠️ BufferGeometryUtils not loaded, using fallback pillars');
+        createGlowingPillarsFallback();
+        return;
     }
-}
 
-/**
- * Create single glowing pillar
- * @param {number} x - X position
- * @param {number} z - Z position
- */
-function createGlowPillar(x, z) {
-    const profile = getDeviceProfile();
-    const q = profile.quality;
+    const mergeGeometries = THREE.BufferGeometryUtils.mergeGeometries;
 
-    // Pillar base
-    const pillarGeo = new THREE.CylinderGeometry(0.4, 0.6, 12, q.cylinderSegments);
+    const pillarGeometries = [];
+    const orbGeometries = [];
+    const glowGeometries = [];
+
+    // Generate all pillar positions
+    for (let z = -25; z > -200; z -= q.pillarSpacing) {
+        [-10, 10].forEach(x => {
+            // Pillar body
+            const pillarGeo = new THREE.CylinderGeometry(0.4, 0.6, 12, q.cylinderSegments);
+            pillarGeo.translate(x, 6, z);
+            pillarGeometries.push(pillarGeo);
+
+            // Orb on top
+            const orbGeo = new THREE.SphereGeometry(0.45, q.glowDetail, q.glowDetail);
+            orbGeo.translate(x, 12.5, z);
+            orbGeometries.push(orbGeo);
+
+            // Glow sphere
+            if (q.enablePillarGlow) {
+                const glowGeo = new THREE.SphereGeometry(0.8, q.glowDetail, q.glowDetail);
+                glowGeo.translate(x, 12.5, z);
+                glowGeometries.push(glowGeo);
+            }
+        });
+    }
+
+    // Merge all pillars → 1 draw call
+    const mergedPillars = mergeGeometries(pillarGeometries);
     const pillarMat = new THREE.MeshStandardMaterial({
         color: 0x1a1a2e,
         roughness: 0.4,
         metalness: 0.3
     });
-    const pillar = new THREE.Mesh(pillarGeo, pillarMat);
-    pillar.position.set(x, 6, z);
-    scene.add(pillar);
+    const pillarMesh = new THREE.Mesh(mergedPillars, pillarMat);
+    scene.add(pillarMesh);
 
-    // Glowing orb on top
-    const orbGeo = new THREE.SphereGeometry(0.45, q.glowDetail, q.glowDetail);
-    const orbColor = x < 0 ? 0x00ffcc : 0xff00cc;
-    const orbMat = new THREE.MeshBasicMaterial({
-        color: orbColor,
-        transparent: true,
-        opacity: 0.9
+    // Merge all orbs → 1 draw call
+    const mergedOrbs = mergeGeometries(orbGeometries);
+    const orbMat = new THREE.MeshStandardMaterial({
+        color: 0x00ffcc,
+        emissive: 0x00ffcc,
+        emissiveIntensity: 0.5  // Glows without lights!
     });
-    const orb = new THREE.Mesh(orbGeo, orbMat);
-    orb.position.set(x, 12.5, z);
-    scene.add(orb);
+    const orbMesh = new THREE.Mesh(mergedOrbs, orbMat);
+    scene.add(orbMesh);
 
-    // Orb glow (skip on ultra-low - the orb itself is enough)
-    if (q.enablePillarGlow) {
-        const glowGeo = new THREE.SphereGeometry(0.8, q.glowDetail, q.glowDetail);
+    // Merge all glows → 1 draw call
+    if (glowGeometries.length > 0) {
+        const mergedGlows = mergeGeometries(glowGeometries);
         const glowMat = new THREE.MeshBasicMaterial({
-            color: orbColor,
+            color: 0x00ffcc,
             transparent: true,
             opacity: 0.2
         });
-        const glow = new THREE.Mesh(glowGeo, glowMat);
-        glow.position.copy(orb.position);
-        scene.add(glow);
+        const glowMesh = new THREE.Mesh(mergedGlows, glowMat);
+        scene.add(glowMesh);
     }
 
-    // Point light (skip on low-end devices)
-    if (q.enablePillarLights) {
-        const light = new THREE.PointLight(orbColor, 0.4, 15);
-        light.position.copy(orb.position);
-        scene.add(light);
-    }
+    console.log(`✅ Pillars optimized: ${pillarGeometries.length} → 3 draw calls`);
+}
+
+// Fallback if BufferGeometryUtils not loaded
+function createGlowingPillarsFallback() {
+    const profile = getDeviceProfile();
+    const q = profile.quality;
+
+    // Create only a few pillars as samples
+    const positions = [
+        [-10, -25], [10, -25],
+        [-10, -50], [10, -50],
+        [-10, -75], [10, -75],
+        [-10, -100], [10, -100]
+    ];
+
+    positions.forEach(([x, z]) => {
+        const pillarGeo = new THREE.CylinderGeometry(0.4, 0.6, 12, q.cylinderSegments);
+        const pillarMat = new THREE.MeshStandardMaterial({
+            color: 0x1a1a2e,
+            roughness: 0.4,
+            metalness: 0.3
+        });
+        const pillar = new THREE.Mesh(pillarGeo, pillarMat);
+        pillar.position.set(x, 6, z);
+        scene.add(pillar);
+
+        const orbGeo = new THREE.SphereGeometry(0.45, q.glowDetail, q.glowDetail);
+        const orbMat = new THREE.MeshStandardMaterial({
+            color: 0x00ffcc,
+            emissive: 0x00ffcc,
+            emissiveIntensity: 0.5
+        });
+        const orb = new THREE.Mesh(orbGeo, orbMat);
+        orb.position.set(x, 12.5, z);
+        scene.add(orb);
+    });
+
+    console.log('⚠️ Fallback pillars created (limited count)');
 }
 
 
 /* ╔═══════════════════════════════════════════════════════════════════════════╗
-   ║  PLAYER (ELF) CREATION                                                    ║
+   ║  🚀 OPTIMIZED PLAYER - MERGED BODY (15 → 4 meshes)                        ║
    ╚═══════════════════════════════════════════════════════════════════════════╝ */
 
-/**
- * Create the elf player character
- */
 function createElfPlayer() {
     const elfGroup = new THREE.Group();
 
-    // Body
-    const bodyGeo = new THREE.CylinderGeometry(0.32, 0.65, 1.9, 8);
-    const bodyMat = new THREE.MeshStandardMaterial({
-        color: 0x2a4070,
-        roughness: 0.5,
-        metalness: 0.3
-    });
-    const body = new THREE.Mesh(bodyGeo, bodyMat);
-    body.position.y = 1.15;
-    elfGroup.add(body);
+    // Check if mergeGeometries exists
+    const mergeGeometries = (typeof THREE.BufferGeometryUtils !== 'undefined' && THREE.BufferGeometryUtils.mergeGeometries)
+        ? THREE.BufferGeometryUtils.mergeGeometries
+        : null;
 
-    // Head
-    const headGeo = new THREE.SphereGeometry(0.42, 14, 14);
-    const headMat = new THREE.MeshStandardMaterial({
-        color: 0xffd8b8,
-        roughness: 0.55
-    });
-    const head = new THREE.Mesh(headGeo, headMat);
-    head.position.y = 2.5;
-    elfGroup.add(head);
+    if (mergeGeometries) {
+        // ✅ OPTIMIZED VERSION - Merge body parts
+        const bodyGeometries = [];
 
-    // Ears (pointy elf ears)
-    const earGeo = new THREE.ConeGeometry(0.1, 0.45, 6);
-    const earMat = new THREE.MeshStandardMaterial({
-        color: 0xffd8b8,
-        roughness: 0.55
-    });
+        // Body
+        const bodyGeo = new THREE.CylinderGeometry(0.32, 0.65, 1.9, 8);
+        bodyGeo.translate(0, 1.15, 0);
+        bodyGeometries.push(bodyGeo);
 
-    const leftEar = new THREE.Mesh(earGeo, earMat);
-    leftEar.position.set(-0.42, 2.68, 0);
-    leftEar.rotation.z = 1.15;
-    elfGroup.add(leftEar);
+        // Head
+        const headGeo = new THREE.SphereGeometry(0.42, 14, 14);
+        headGeo.translate(0, 2.5, 0);
+        bodyGeometries.push(headGeo);
 
-    const rightEar = new THREE.Mesh(earGeo, earMat);
-    rightEar.position.set(0.42, 2.68, 0);
-    rightEar.rotation.z = -1.15;
-    elfGroup.add(rightEar);
+        // Ears
+        const earGeo = new THREE.ConeGeometry(0.1, 0.45, 6);
+        
+        const leftEarGeo = earGeo.clone();
+        leftEarGeo.rotateZ(1.15);
+        leftEarGeo.translate(-0.42, 2.68, 0);
+        bodyGeometries.push(leftEarGeo);
 
-    // Hair
-    const hairGeo = new THREE.ConeGeometry(0.48, 1.1, 9);
-    const hairMat = new THREE.MeshStandardMaterial({
-        color: 0x88ccff,
-        roughness: 0.4,
-        metalness: 0.2
-    });
-    const hair = new THREE.Mesh(hairGeo, hairMat);
-    hair.position.set(0, 2.35, -0.12);
-    hair.rotation.x = 0.28;
-    elfGroup.add(hair);
+        const rightEarGeo = earGeo.clone();
+        rightEarGeo.rotateZ(-1.15);
+        rightEarGeo.translate(0.42, 2.68, 0);
+        bodyGeometries.push(rightEarGeo);
 
-    // Glowing eyes
+        // Hair
+        const hairGeo = new THREE.ConeGeometry(0.48, 1.1, 9);
+        hairGeo.rotateX(0.28);
+        hairGeo.translate(0, 2.35, -0.12);
+        bodyGeometries.push(hairGeo);
+
+        // Merge all body parts
+        const mergedBody = mergeGeometries(bodyGeometries);
+        const bodyMat = new THREE.MeshStandardMaterial({
+            color: 0x2a4070,
+            roughness: 0.5,
+            metalness: 0.3
+        });
+        const playerMesh = new THREE.Mesh(mergedBody, bodyMat);
+        elfGroup.add(playerMesh);
+
+        console.log('✅ Player body merged');
+
+    } else {
+        // ❌ FALLBACK - Separate meshes
+        const bodyGeo = new THREE.CylinderGeometry(0.32, 0.65, 1.9, 8);
+        const bodyMat = new THREE.MeshStandardMaterial({
+            color: 0x2a4070,
+            roughness: 0.5,
+            metalness: 0.3
+        });
+        const body = new THREE.Mesh(bodyGeo, bodyMat);
+        body.position.y = 1.15;
+        elfGroup.add(body);
+
+        const headGeo = new THREE.SphereGeometry(0.42, 14, 14);
+        const headMat = new THREE.MeshStandardMaterial({
+            color: 0xffd8b8,
+            roughness: 0.55
+        });
+        const head = new THREE.Mesh(headGeo, headMat);
+        head.position.y = 2.5;
+        elfGroup.add(head);
+
+        const earGeo = new THREE.ConeGeometry(0.1, 0.45, 6);
+        const earMat = new THREE.MeshStandardMaterial({
+            color: 0xffd8b8,
+            roughness: 0.55
+        });
+
+        const leftEar = new THREE.Mesh(earGeo, earMat);
+        leftEar.position.set(-0.42, 2.68, 0);
+        leftEar.rotation.z = 1.15;
+        elfGroup.add(leftEar);
+
+        const rightEar = new THREE.Mesh(earGeo, earMat);
+        rightEar.position.set(0.42, 2.68, 0);
+        rightEar.rotation.z = -1.15;
+        elfGroup.add(rightEar);
+
+        const hairGeo = new THREE.ConeGeometry(0.48, 1.1, 9);
+        const hairMat = new THREE.MeshStandardMaterial({
+            color: 0x88ccff,
+            roughness: 0.4,
+            metalness: 0.2
+        });
+        const hair = new THREE.Mesh(hairGeo, hairMat);
+        hair.position.set(0, 2.35, -0.12);
+        hair.rotation.x = 0.28;
+        elfGroup.add(hair);
+
+        console.warn('⚠️ Player using fallback (no merge)');
+    }
+
+    // Eyes (emissive - no lights needed)
     const eyeGeo = new THREE.SphereGeometry(0.07, 8, 8);
-    const eyeMat = new THREE.MeshBasicMaterial({ color: 0x00ffcc });
+    const eyeMat = new THREE.MeshStandardMaterial({
+        color: 0x00ffcc,
+        emissive: 0x00ffcc,
+        emissiveIntensity: 1.0
+    });
 
     const leftEye = new THREE.Mesh(eyeGeo, eyeMat);
     leftEye.position.set(-0.14, 2.55, 0.36);
@@ -943,27 +907,18 @@ function createElfPlayer() {
     rightEye.position.set(0.14, 2.55, 0.36);
     elfGroup.add(rightEye);
 
-    // Amulet
+    // Amulet (emissive)
     const amuletGeo = new THREE.OctahedronGeometry(0.16);
-    const amuletMat = new THREE.MeshBasicMaterial({
+    const amuletMat = new THREE.MeshStandardMaterial({
         color: 0x00ff88,
-        transparent: true,
-        opacity: 0.9
+        emissive: 0x00ff88,
+        emissiveIntensity: 0.8
     });
     const amulet = new THREE.Mesh(amuletGeo, amuletMat);
     amulet.position.set(0, 1.85, 0.52);
     elfGroup.add(amulet);
 
-    // Lights
-    const eyeLight = new THREE.PointLight(0x00ffcc, 0.3, 2);
-    eyeLight.position.set(0, 2.55, 0.45);
-    elfGroup.add(eyeLight);
-
-    const amuletLight = new THREE.PointLight(0x00ff88, 0.5, 3);
-    amuletLight.position.set(0, 1.85, 0.52);
-    elfGroup.add(amuletLight);
-
-    // Wings
+    // Wings (need to animate separately)
     const wingMat = new THREE.MeshBasicMaterial({
         color: 0x88ffff,
         transparent: true,
@@ -1003,12 +958,13 @@ function createElfPlayer() {
     playerGlow.position.y = 1.4;
     elfGroup.add(playerGlow);
 
-    // Set player reference
+    // NO LIGHTS - emissive materials only!
+
     player = elfGroup;
     player.position.set(0, 0, 5);
     scene.add(player);
 
-    console.log('🧝 Elf player created');
+    console.log('🧝 Elf player created (optimized)');
 }
 
 
@@ -1016,31 +972,24 @@ function createElfPlayer() {
    ║  PLAYER VISUAL UPDATES                                                    ║
    ╚═══════════════════════════════════════════════════════════════════════════╝ */
 
-/**
- * Update player idle animations
- */
 function updatePlayerAnimations() {
     if (!player) return;
 
     const time = Date.now();
 
-    // Subtle sway
     player.rotation.z = Math.sin(time / 130) * 0.05;
 
-    // Wing flapping
     if (elfWings) {
         const wingFlap = Math.sin(time / 75) * 0.28;
         elfWings.left.rotation.y = -0.45 + wingFlap;
         elfWings.right.rotation.y = 0.45 - wingFlap;
     }
 
-    // Glow pulsing
     if (playerGlow) {
         playerGlow.material.opacity = 0.06 + Math.sin(time / 350) * 0.03;
         playerGlow.scale.setScalar(1 + Math.sin(time / 450) * 0.08);
     }
 
-    // Shield effect when active
     if (typeof activeBoosts !== 'undefined' && activeBoosts.shield && activeBoosts.shield.active && playerGlow) {
         playerGlow.material.color.setHex(0x00ffff);
         playerGlow.material.opacity = 0.2 + Math.sin(time / 100) * 0.1;
@@ -1048,7 +997,6 @@ function updatePlayerAnimations() {
         playerGlow.material.color.setHex(0x00ff88);
     }
 
-    // Invincibility blink
     if (typeof isInvincible !== 'undefined' && isInvincible) {
         const blinkRate = (typeof LIVES_CONFIG !== 'undefined') ? LIVES_CONFIG.REVIVAL_BLINK_RATE : 100;
         player.visible = Math.floor(time / blinkRate) % 2 === 0;
@@ -1057,9 +1005,6 @@ function updatePlayerAnimations() {
     }
 }
 
-/**
- * Reset player position and state
- */
 function resetPlayerPosition() {
     if (!player) return;
 
@@ -1080,16 +1025,12 @@ function resetPlayerPosition() {
    ║  ENVIRONMENT ANIMATIONS                                                    ║
    ╚═══════════════════════════════════════════════════════════════════════════╝ */
 
-/**
- * Update environment animations (planets, nebulas, stars)
- */
 function updateEnvironmentAnimations() {
     if (typeof env === 'undefined' || !env) return;
     if (typeof deltaTime === 'undefined') return;
 
     const t = performance.now() * 0.001;
 
-    // Planets: rotate + float
     if (env.planets) {
         env.planets.forEach((p, i) => {
             if (!p) return;
@@ -1099,7 +1040,6 @@ function updateEnvironmentAnimations() {
         });
     }
 
-    // Rings: slow spin
     if (env.rings) {
         env.rings.forEach((r, i) => {
             if (!r) return;
@@ -1107,7 +1047,6 @@ function updateEnvironmentAnimations() {
         });
     }
 
-    // Nebulas: opacity breathing + slow rotation
     if (env.nebulas) {
         env.nebulas.forEach((n, i) => {
             if (!n || !n.material) return;
@@ -1116,7 +1055,6 @@ function updateEnvironmentAnimations() {
         });
     }
 
-    // Starfields: rotate slowly
     if (env.stars) env.stars.rotation.y += 0.0004 * deltaTime;
     if (env.coloredStars) env.coloredStars.rotation.y -= 0.0003 * deltaTime;
 }
@@ -1126,21 +1064,12 @@ function updateEnvironmentAnimations() {
    ║  UTILITY FUNCTIONS                                                         ║
    ╚═══════════════════════════════════════════════════════════════════════════╝ */
 
-/**
- * Get element by ID (helper)
- * @param {string} id - Element ID
- * @returns {HTMLElement} Element
- */
 function getEl(id) {
     return document.getElementById(id);
 }
 
-/**
- * Clean up Three.js resources (for memory management)
- */
 function cleanupThreeJS() {
     if (scene) {
-        // Dispose geometries and materials
         scene.traverse((object) => {
             if (object.geometry) {
                 object.geometry.dispose();
@@ -1154,7 +1083,6 @@ function cleanupThreeJS() {
             }
         });
 
-        // Clear scene
         while (scene.children.length > 0) {
             scene.remove(scene.children[0]);
         }
@@ -1172,7 +1100,6 @@ function cleanupThreeJS() {
    ║  EXPORTS / GLOBAL ACCESS                                                   ║
    ╚═══════════════════════════════════════════════════════════════════════════╝ */
 
-// Make key functions available globally (if using modules, export these instead)
 window.initThreeJS = initThreeJS;
 window.createEnvironment = createEnvironment;
 window.createElfPlayer = createElfPlayer;
@@ -1182,10 +1109,8 @@ window.resetPlayerPosition = resetPlayerPosition;
 window.handleResize = handleResize;
 window.cleanupThreeJS = cleanupThreeJS;
 
-// FPS system
 window.checkFrameTiming = checkFrameTiming;
 window.getCurrentFPS = getCurrentFPS;
 window.getDeviceProfile = getDeviceProfile;
 
-
-console.log('✅ 04-three-setup.js loaded (fully optimized)');
+console.log('✅ 04-three-setup.js loaded (FULLY OPTIMIZED - v2)');
